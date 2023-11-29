@@ -1,0 +1,60 @@
+---
+title: "Untitled"
+
+---
+Analysis of the Washignton State crash data
+```{r}
+getwd()
+```
+```{r}
+#setwd()
+```
+cit <- read.csv("citations.CSV", quote = "", 
+                 row.names = NULL, 
+                 stringsAsFactors = FALSE)
+```{r}
+raw_data <- read.csv(
+    "WA_Crash_Summary.csv",
+    header = TRUE,
+    sep = ",",
+    quote = "",
+    row.names = NULL,
+    stringsAsFactors = FALSE
+    )
+```
+```{r}
+dim(raw_data)
+```
+
+```{r}
+head(raw_data)
+```
+Want the datatype of a column
+```{r}
+typeof(raw_data$Damage.Threshold.Met)
+```
+Column names of the data frame.
+```{r}
+colnames(raw_data)
+```
+Get unique categories in a column
+```{r}
+#unique(raw_data[, 15])
+unique(raw_data$X.Collision.Type.)
+```
+Want to see the different cities in the appropriate column
+```{r}
+unique(raw_data$X.Injury.Severity.)
+```
+Import necessary library
+```{r}
+library(dplyr) # for functions
+```
+```{r}
+raw_data %>% filter(X.Injury.Severity. ==  "\"Daylight\"")
+```
+
+```{r}
+categories <- unique(yourDataFrame$yourColumn) 
+numberOfCategories <- length(categories)
+```
