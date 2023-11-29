@@ -53,7 +53,13 @@ library(dplyr) # for functions
 ```{r}
 raw_data %>% filter(X.Injury.Severity. ==  "\"Daylight\"")
 ```
-
+Will import data.table package to make importing of CSV file faster
+```{r}
+library(data.table)
+```
+```{r}
+df <- fread("/Volumes/my_passport/data_sets/WA_Crash_Summary.csv")
+```
 ```{r}
 categories <- unique(yourDataFrame$yourColumn) 
 numberOfCategories <- length(categories)
