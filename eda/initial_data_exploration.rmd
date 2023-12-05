@@ -1,0 +1,81 @@
+---
+title: "Exploratory Data Analysis of Washington State Crash Data"
+author: J. Bravo
+date: "December 4, 2023"
+---
+
+Import necessary libraries.
+Will import data.table package to make importing of CSV file faster.
+```{r}
+library(dplyr) # for functions
+library(data.table)
+```
+Reside in same directory as the dataset(s).
+```{r}
+getwd()
+```
+Import the dataset.
+```{r}
+raw_data <- fread("/Volumes/my_passport/data_sets/WA_Crash_Summary.csv")
+```
+Size of the dataframe.
+```{r}
+dim(raw_data)
+```
+According to the command above, this sample is 330k rows by 25 columns.
+Want a sample of the first six entries.
+```{r}
+head(raw_data)
+```
+Datatype check.
+```{r}
+print(class(raw_data))
+```
+Dataype check on a column.
+```{r}
+print(class(raw_data$"Pedestrians Involved"))
+print(class(raw_data$"Pedalcyclists Involved"))
+```
+Column names of the data frame.
+```{r}
+colnames(raw_data)
+```
+Get unique categories in a column
+```{r}
+unique(raw_data$"City")
+unique(raw_data$"Hit and Run")
+```
+The cities column has 281 unique entries, whereas the Hit and Run column is boolean T or F.
+Store the number of records in its own variable for later analysis.
+```{r}
+num_of_records <- nrow(raw_data)
+num_of_records
+```
+Check the unique values in Injury Severity.
+```{r}
+unique(raw_data$"Injury Severity")
+```
+Want new dataframe to hold those records where only "Unknown Injury Collision" is in the "Injurity Severity" field.
+```{r}
+unknowns <- raw_data %>%
+    filter(raw_data$"Injury Severity" == "Unknown Injury Collision")
+num_of_unknowns <- nrow(unknowns)
+```
+Get proportion of entries that have "Unknown Injury Collision" status
+```{r}
+num_of_unknowns / num_of_records
+```
+So according to above results, about 10% of collisions are categorized as Unknown.
+Similar analysis for the proportion of accidents categorized as "Serious Injury Collision"
+```{r}
+serious <- raw_data %>%
+    filter(raw_data$"Injury Severity" == "Serious Injury Collision")
+num_of_serious <- nrow(serious)
+num_of_serious / num_of_records
+```
+So only about a percent of the collisions have been reported as Serious.
+Following is used to get the number of unique caegories within a column.
+```{r}
+categories <- unique(yourDataFrame$yourColumn)
+numberOfCategories <- length(categories)
+```
