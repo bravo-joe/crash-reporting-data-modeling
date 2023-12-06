@@ -9,6 +9,8 @@ Will import data.table package to make importing of CSV file faster.
 ```{r}
 library(dplyr) # for functions
 library(data.table)
+#library(ggplot2)
+library(RColorBrewer)
 ```
 Reside in same directory as the dataset(s).
 ```{r}
@@ -79,3 +81,62 @@ Following is used to get the number of unique caegories within a column.
 categories <- unique(yourDataFrame$yourColumn)
 numberOfCategories <- length(categories)
 ```
+Get number of "Fatal Collisions", "No Injury Collision", and "Minor Injury Collision" "Injury Severity" types.
+```{r}
+# No injury collision
+no_coll <- raw_data %>%
+    filter(raw_data$"Injury Severity" == "No Injury Collision")
+num_of_no_coll <- nrow(no_coll)
+# Minor injury collision
+minor_coll <- raw_data %>%
+    filter(raw_data$"Injury Severity" == "Minor Injury Collision")
+num_of_minor_coll <- nrow(minor_coll)
+# Fatal collision
+fatal <- raw_data %>%
+    filter(raw_data$"Injury Severity" == "Fatal Collision")
+num_of_fatal <- nrow(fatal)
+```
+Plot to earlier results to see how the different categories compare.
+```{r}
+# Create data
+plotting_data <- data.frame(
+  name = c(
+    "No Injury Collision"
+    , "Minor Injury Collision"
+    , "Serious Injury Collision"
+    , "Fatal Collision"
+    , "Unknown Injury Collision"
+    ),
+  value = c(
+    num_of_no_coll
+    , num_of_minor_coll
+    , num_of_serious
+    , num_of_fatal
+    , num_of_unknowns
+    )
+)
+
+# Open jpeg file
+jpeg("rplot.jpg")
+coul <- brewer.pal(5, "Accent") ## variable to store plot style
+barplot(height = plotting_data$value, names = plotting_data$name,
+        col = coul,
+        las = 1,
+        cex.names = 0.55
+        ) ## Plot 1
+# Close the file
+dev.off()
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
