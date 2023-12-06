@@ -14,7 +14,8 @@ library(RColorBrewer)
 ```
 Reside in same directory as the dataset(s).
 ```{r}
-getwd()
+location <- getwd()
+location
 ```
 Import the dataset.
 ```{r}
@@ -115,7 +116,6 @@ plotting_data <- data.frame(
     , num_of_unknowns
     )
 )
-
 # Open jpeg file
 jpeg("rplot.jpg")
 coul <- brewer.pal(5, "Accent") ## variable to store plot style
@@ -127,7 +127,33 @@ barplot(height = plotting_data$value, names = plotting_data$name,
 # Close the file
 dev.off()
 ```
-
+So, "No Injury Collision" is the most likely outcome from the "Injury Severity" field. This is followed
+by "Minor Injury Collision" and "Unknown Injury Collision" as the third likely outcome.
+Now, want to check the unique values in the "Collision Type" column/field.
+```{r}
+unique(raw_data$"Collision Type")
+```
+The "Collision Type" field is filled with NA's, i.e. the column is not populated. Confirmed with a brief view
+of the CSV file in Excel. Will remove this field as a dependent variable.
+Next, to investigate the options in the "Lighting Condition" column.
+```{r}
+unique(raw_data$"Lighting Condition")
+```
+There are ten unique values but with some ambiguity. There is "Unknown", "Other", and "".
+Get the sum of NAs in the column.
+```{r}
+sum(is.na(raw_data$"Lighting Condition"))
+```
+Get a dataframe where "Lighting Condition" is "".
+```{r}
+na_lighting_cond <- raw_data %>%
+    filter(raw_data$"Lighting Condition" == "")
+```
+Get the count of the above dataframe.
+```{r}
+nrow(na_lighting_cond)
+```
+There are 509 records in this dataframe.
 ```{r}
 ```
 
@@ -140,3 +166,5 @@ dev.off()
 ```{r}
 ```
 
+```{r}
+```
