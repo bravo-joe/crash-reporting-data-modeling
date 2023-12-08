@@ -3,7 +3,6 @@ title: "Exploratory Data Analysis of Washington State Crash Data"
 author: J. Bravo
 date: "December 4, 2023"
 ---
-
 Import necessary libraries.
 Will import data.table package to make importing of CSV file faster.
 ```{r}
@@ -154,17 +153,25 @@ Get the count of the above dataframe.
 nrow(na_lighting_cond)
 ```
 There are 509 records in this dataframe.
+Want the proportion of records that are Hit and Run instances.
 ```{r}
+nrow(raw_data %>% filter(raw_data$"Hit and Run" == "Y")) / num_of_records
+```
+Want the proportion of records that are not Hit and Run instances.
+```{r}
+nrow(raw_data %>% filter(raw_data$"Hit and Run" == "N")) / num_of_records
+```
+Now, want to see the unique values in the "Weather Condition" field.
+```{r}
+unique(raw_data$"Weather Condition")
 ```
 
 ```{r}
+nrow(raw_data %>%
+    filter(raw_data$"Weather Condition" == "Clear"))
 ```
-
+Want a brief view of the "Damage Threshold Met" column values. I believe (need to confirm) that Damage
+Threshold Met if damage is over $1,000.
 ```{r}
-```
-
-```{r}
-```
-
-```{r}
+unique(raw_data$"Damage Threshold Met")
 ```
