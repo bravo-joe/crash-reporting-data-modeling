@@ -175,3 +175,87 @@ Threshold Met if damage is over $1,000.
 ```{r}
 unique(raw_data$"Damage Threshold Met")
 ```
+Determine the data type that R categorizes the "Collision Date" field. In this column is the time.
+Want to determine if this is a predictor to include in my model
+```{r}
+class((raw_data$"Collision Date"))
+```
+Data type is NULL.
+A library to deal with times and dates.
+```{r}
+library(lubridate)
+```
+Check out a quick sample
+```{r}
+head((raw_data$"Collision Date"))
+```
+Change it to more appropriate date format and double-check the data type.
+```{r}
+raw_data$"Collision Date" <- mdy_hms(raw_data$"Collision Date")
+class((raw_data$"Collision Date"))
+```
+Want to determine if the time is in military time
+```{r}
+print(raw_data$"Collision Date")
+```
+It is indeed in military time.
+```{r}
+sample_date <- raw_data$"Collision Date"[[190]]
+sample_date
+```
+Prototyping extracting the hour and minute from the date above.
+```{r}
+hr_and_min <- hour(sample_date) + minute(sample_date) / 60
+hr_and_min
+```
+See if I can get the date column into a more appropriate column for analysis.
+Will create function to return minute as a decimal of an hour.
+```{r}
+min_to_dec <- function(x) {
+    return(hour(x) + minute(x) / 60)
+}
+```
+
+```{r}
+date_col <- raw_data$"Collision Date" %>% as.data.frame()
+hours_and_minutes <-
+    lapply(date_col, min_to_dec)
+hours_and_minutes <- hours_and_minutes %>% as.data.frame()
+```
+Successfully turned a 24 hour reporting column to a numeric using just the hour and minutes.
+Now, want the dimensions of the new data frame.
+```{r}
+dim(hours_and_minutes)
+```
+Separate the Injury Severity column.
+```{r}
+collision_col <- raw_data$"Injury Severity"
+collision_col <- collision_col %>% as.data.frame()
+typeof(collision_col)
+```
+Get the dimensions of the new collision column to make sure they are compatible with the time column.
+```{r}
+
+```
+```{r}
+```
+```{r}
+```
+```{r}
+```
+```{r}
+```
+```{r}
+```
+```{r}
+```
+```{r}
+```
+```{r}
+```
+```{r}
+```
+```{r}
+```
+```{r}
+```
