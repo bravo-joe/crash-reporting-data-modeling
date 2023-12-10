@@ -234,19 +234,38 @@ collision_col <- collision_col %>% as.data.frame()
 typeof(collision_col)
 ```
 Get the dimensions of the new collision column to make sure they are compatible with the time column.
+Dimension check.
 ```{r}
-
+dim(collision_col)
+```
+THe dimensions match so now I want to merge the two new columns together.
+```{r}
+# Injury severity as a function of time
+severity_time <- data.frame(X = c(hours_and_minutes, collision_col))
+colnames(severity_time) <- c("time", "injury_severity")
+head(severity_time)
 ```
 ```{r}
+library(purrr)
+corr_res <- map(severity_time$injury_severity, cor.test, y = severity_time$time)
 ```
+Chi-Square Test 1: Compare City and Collision Type fields
+This will be dataframe 1.
 ```{r}
+df1 <- data.frame(raw_data$"Injury Severity", raw_data$"City")
 ```
+Create a contingency table with the needed variables.  
 ```{r}
+df1 <- table(raw_data$"Injury Severity", raw_data$"City")
+print(df1)
 ```
+Will apply the chisq.test() function to the contigency table.
 ```{r}
+print(chisq.test(df1, simulate.p.value = TRUE))
 ```
-```{r}
-```
+Used the option to compute p-values by Monte Carlo simulation. At a significance level of 0.05,
+the results had a p-value of 0.0004998 which is less than the 0.05 threshold. Hence, I reject the
+Null Hypothesis that both City and Injury Severity are independent of each other.
 ```{r}
 ```
 ```{r}
