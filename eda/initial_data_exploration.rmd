@@ -8,7 +8,6 @@ Will import data.table package to make importing of CSV file faster.
 ```{r}
 library(dplyr) # for functions
 library(data.table)
-#library(ggplot2)
 library(RColorBrewer)
 ```
 Reside in same directory as the dataset(s).
@@ -78,8 +77,8 @@ num_of_serious / num_of_records
 So only about a percent of the collisions have been reported as Serious.
 Following is used to get the number of unique caegories within a column.
 ```{r}
-categories <- unique(yourDataFrame$yourColumn)
-numberOfCategories <- length(categories)
+#categories <- unique(yourDataFrame$yourColumn)
+#numberOfCategories <- length(categories)
 ```
 Get number of "Fatal Collisions", "No Injury Collision", and "Minor Injury Collision" "Injury Severity" types.
 ```{r}
@@ -153,6 +152,11 @@ Get the count of the above dataframe.
 nrow(na_lighting_cond)
 ```
 There are 509 records in this dataframe.
+Want to know the proportion of records that are empty, i.e. "".
+```{r}
+nrow(na_lighting_cond) / num_of_records
+```
+
 Want the proportion of records that are Hit and Run instances.
 ```{r}
 nrow(raw_data %>% filter(raw_data$"Hit and Run" == "Y")) / num_of_records
@@ -266,15 +270,76 @@ print(chisq.test(df1, simulate.p.value = TRUE))
 Used the option to compute p-values by Monte Carlo simulation. At a significance level of 0.05,
 the results had a p-value of 0.0004998 which is less than the 0.05 threshold. Hence, I reject the
 Null Hypothesis that both City and Injury Severity are independent of each other.
+
+Will do some data preprocessing before performing second chi-square test.
+First, isolate the two columns of interest. This will be data frame 2.
 ```{r}
+df_2 <- data.frame(raw_data$"Lighting Condition", raw_data$"Injury Severity")
+df_2 <- df_2 %>%
+        rename("lighting_condition" = "raw_data..Lighting.Condition.",
+               "injury_severity" = "raw_data..Injury.Severity."
+               )
+head(df_2)
 ```
+Get the size of the new data frame.
 ```{r}
+dim(df_2)
 ```
+There 509 rows with "" whereas the whole dataframe is 330,745 rows. Because this porportion is less than one percent of the entire
+data frame, I will simply remove these rows.
 ```{r}
+x <- df_2 %>%
+    filter(df_2$lighting_condition == "")
+dim(x)
 ```
+
+Compute the difference
 ```{r}
+print(330745 - 509)
 ```
+The above reveals 330236 rows.
+This is the number of records in the filtered data frame.
+
 ```{r}
+df_2a <- df_2 %>%
+    filter(df_2$lighting_condition != "")
+dim(df_2a)
 ```
+This last data frame is now ready to run chi-square testing.
+
+### Chi-Square Testing 2
+This next chi-square test will check the relationship between injury severity and lighting condition.
 ```{r}
+tbl_2 <- table(df_2a$injury_severity, df_2a$lighting_condition)
+print(tbl_2)
+print(chisq.test(tbl_2, simulate.p.value = TRUE))
+```
+
+Next, will do the preprocessing on the Weather Condition field.
+```{r}
+df_3 <- data.frame(raw_data$"Weather Condition", raw_data$"Injury Severity")
+df_3 <- df_3 %>%
+        rename("weather_condition" = "raw_data..Weather.Condition.",
+               "injury_severity" = "raw_data..Injury.Severity."
+               )
+head(df_3)
+```
+
+Get the count of empty entries.
+```{r}
+y <- df_3 %>%
+    filter(df_3$weather_condition == "")
+dim(y)
+```
+
+The difference calculation
+```{r}
+print(330745 - 372)
+```
+Last data frame should have 330,373 records.
+
+```{r}
+df_3a <- df_3 %>%
+    filter(df_3$weather_condition != "")
+dim(df_3a)
 ```
