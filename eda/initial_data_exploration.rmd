@@ -343,3 +343,37 @@ df_3a <- df_3 %>%
     filter(df_3$weather_condition != "")
 dim(df_3a)
 ```
+
+### Chi-Square Testing 3
+This next chi-square test will check the relationship between injury severity and weather condition.
+```{r}
+tbl_3 <- table(df_3a$injury_severity, df_3a$weather_condition)
+print(tbl_3)
+print(chisq.test(tbl_3, simulate.p.value = TRUE))
+```
+The resulting p-value = 0.0004998 which is less than the 0.05 threshold. Hence, I reject the
+Null Hypothesis that Weather Severity and Injury Severity are independent of each other.
+
+After performing the chi-sqare testing will move ahead with preprocesing and cleaning the data set.
+Prototyping the pre=processing method.
+```{r}
+processed_df <- raw_data %>%
+    select(
+        "City",
+        "Weather Condition",
+        "Lighting Condition",
+        "Injury Severity"
+    ) %>%
+    filter(
+        "Weather Condition" != ""
+    ) %>%
+    filter(
+        "Lighting Condition" != ""
+    )
+head(processed_df)
+```
+
+Now, want the dimension of this initial data frame.
+```{r}
+dim(processed_df)
+```
