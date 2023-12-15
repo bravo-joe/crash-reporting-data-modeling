@@ -377,3 +377,32 @@ Now, want the dimension of this initial data frame.
 ```{r}
 dim(processed_df)
 ```
+Get a summary of this new dataframe
+```{r}
+summary(processed_df)
+```
+Including some more libraries.
+```{r}
+#install.packages("randomForest")
+#install.packages("caTools")
+library(randomForest)
+require(caTools)
+```
+Now, prototyping splitting the data
+```{r}
+sample <- sample.split(processed_df$"Injury Severity", SplitRatio = 0.80)
+train_df <- subset(processed_df, sample == TRUE)
+test_df  <- subset(processed_df, sample == FALSE)
+dim(train_df)
+dim(test_df)
+```
+Will now create a model
+```{r}
+# Fitting Random Forest to the train dataset
+set.seed(120)  # Setting seed
+classifier_rf <- randomForest(
+    x = train_df[, -4],
+    y = train_df$"Injury Severity",
+    ntree = 500
+)
+```
