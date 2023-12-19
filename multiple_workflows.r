@@ -74,7 +74,34 @@ rf_fit
 
 
 #Use preditc() of the fitted model
-predict(rf_fit, test_df %>% slice(1:25) %>% print(n=25))
+#prediction <- predict(rf_fit, test_df %>% slice(1:25) %>% print(n = 25))
+prediction <- predict(rf_fit, test_df)
+
+# Trying to get performance metrics
+#metrics(prediction, truth, predicted)
+prediction %>%
+  accuracy(truth = prediction$injury_severity, estimate = .pred_class)
+
+#final_rf_result <- last_fit(rf_wflow_1, sample)
+#final_rf_result
+#accuracy(prediction, .pred_class)
+
+# Initiate the k Nearest Neightbor model
+install.packages("kknn")
+library(kknn)
+
+knn_model <- nearest_neighbor(
+    neighbors = integer(1),
+    weight_func = character(1),
+    dist_power = double(1)
+) %>%
+    set_engine("kknn") %>%
+    set_mode("classification") %>%
+    translate()
+knn_model
+
+
+
 
 
 # End of "multiple_workflows.r"
