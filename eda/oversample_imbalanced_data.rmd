@@ -1,0 +1,112 @@
+---
+title: "Smote implementation in unbalanced data"
+author: "J. Bravo"
+date: "2023-12-20"
+output: html_document
+---
+Load the necessary libraries.
+```{r}
+library(dplyr) # for functions
+library(data.table)
+```
+Load the dataset.
+```{r}
+raw_data <- fread("C:/Users/joepb/Desktop/unzipfolder/WA_Crash_Summary.csv")
+```
+Check a sample
+```{r}
+head(raw_data)
+```
+Install the necessary library and include the library.
+```{r}
+install.packages("SMOTE")
+#library(SMOTE)
+```
+
+Get unique values from data frame.
+```{r}
+unique(raw_data$"Lighting Condition")
+```
+```{r}
+unique(raw_data$"Weather Condition")
+```
+
+Get count of empty string records in the Lighting Condition and Weather Condition fields.
+```{r}
+raw_data %>%
+  filter(raw_data$"Lighting Condition" == "") %>%
+  count()
+```
+```{r}
+raw_data %>%
+  filter(raw_data$"Weather Condition" == "") %>%
+  count()
+```
+
+Now that I've seen how to remove the empty strings in each column, I will implement in one chunk.
+```{r}
+processed_df <- raw_data %>%
+  filter(
+    raw_data$"Weather Condition" != "",
+    raw_data$"Lighting Condition" != ""
+    ) %>%
+  select(
+    "City",
+    "Weather Condition",
+    "Lighting Condition",
+    "Injury Severity"
+    )
+# Change the column names
+colnames(processed_df) <- c(
+    "city",
+    "weather_condition",
+    "lighting_condition",
+    "injury_severity"
+    )
+nrow(processed_df)
+```
+
+Store the number of records in its own variables.
+```{r}
+num_records <- nrow(processed_df)
+num_records
+```
+Get proportions of the other classes
+```{r}
+prop1 <- nrow(processed_df %>% filter(processed_df$injury_severity == "No Injury Collision")) / num_records
+prop2 <- nrow(processed_df %>% filter(processed_df$injury_severity == "Minor Injury Collision")) / num_records
+prop3 <- nrow(processed_df %>% filter(processed_df$injury_severity == "Unknown Injury Collision")) / num_records
+prop4 <- nrow(processed_df %>% filter(processed_df$injury_severity == "Serious Injury Collision")) / num_records
+prop5 <- nrow(processed_df %>% filter(processed_df$injury_severity == "Fatal Collision")) / num_records
+
+print(paste("Proportion for No Injury Collision", prop1))
+print(paste("Proportion for Minor Injury Collision", prop2))
+print(paste("Proportion for Unknown Injury Collision", prop3))
+print(paste("Proportion for Serious Injury Collision", prop4))
+print(paste("Proportion for Fatal Collision", prop5))
+```
+The print statements above detail the distribution of the proportions for each class in the Injury Severity column. There is a clear imbalance that will be corrected via SMOTE.
+
+Convert to factor
+```{r}
+processed_df$injury_severity <- as.factor(processed_df$injury_severity)
+```
+
+Will name this data frame balanced_df.
+```{r}
+# A more balanced dataset
+balanced_df <- SMOTE(
+  processed_df,
+  processed_df$injury_severity
+  )
+
+# View distribution of response variable in new dataset
+table(balanced_df$injury_severity)
+```
+
+
+
+
+
+
+
