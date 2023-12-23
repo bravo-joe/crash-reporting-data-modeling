@@ -8,10 +8,12 @@ Load the necessary libraries.
 ```{r}
 library(dplyr) # for functions
 library(data.table)
+library(janitor)
 ```
 Load the dataset.
 ```{r}
-raw_data <- fread("C:/Users/joepb/Desktop/unzipfolder/WA_Crash_Summary.csv")
+#raw_data <- fread("C:/Users/joepb/Desktop/unzipfolder/WA_Crash_Summary.csv")
+raw_data <- fread("/Volumes/my_passport/data_sets/WA_Crash_Summary.csv")
 ```
 Check a sample
 ```{r}
@@ -45,7 +47,7 @@ raw_data %>%
 
 Now that I've seen how to remove the empty strings in each column, I will implement in one chunk.
 ```{r}
-processed_df <- raw_data %>%
+initial_df <- raw_data %>%
   filter(
     raw_data$"Weather Condition" != "",
     raw_data$"Lighting Condition" != ""
@@ -57,28 +59,47 @@ processed_df <- raw_data %>%
     "Injury Severity"
     )
 # Change the column names
-colnames(processed_df) <- c(
+colnames(initial_df) <- c(
     "city",
     "weather_condition",
     "lighting_condition",
     "injury_severity"
     )
-nrow(processed_df)
+nrow(initial_df)
 ```
 
 Store the number of records in its own variables.
 ```{r}
-num_records <- nrow(processed_df)
+num_records <- nrow(initial_df)
 num_records
 ```
 Get proportions of the other classes
 ```{r}
-prop1 <- nrow(processed_df %>% filter(processed_df$injury_severity == "No Injury Collision")) / num_records
-prop2 <- nrow(processed_df %>% filter(processed_df$injury_severity == "Minor Injury Collision")) / num_records
-prop3 <- nrow(processed_df %>% filter(processed_df$injury_severity == "Unknown Injury Collision")) / num_records
-prop4 <- nrow(processed_df %>% filter(processed_df$injury_severity == "Serious Injury Collision")) / num_records
-prop5 <- nrow(processed_df %>% filter(processed_df$injury_severity == "Fatal Collision")) / num_records
-
+prop1 <- nrow(
+  initial_df %>%
+  filter(
+    initial_df$injury_severity == "No Injury Collision")
+    ) / num_records
+prop2 <- nrow(
+  initial_df %>%
+  filter(
+    initial_df$injury_severity == "Minor Injury Collision")
+    ) / num_records
+prop3 <- nrow(
+  initial_df %>%
+  filter(
+    initial_df$injury_severity == "Unknown Injury Collision")
+    ) / num_records
+prop4 <- nrow(
+    initial_df %>%
+    filter(
+        initial_df$injury_severity == "Serious Injury Collision")
+    ) / num_records
+prop5 <- nrow(
+    initial_df %>%
+    filter(
+        initial_df$injury_severity == "Fatal Collision")
+    ) / num_records
 print(paste("Proportion for No Injury Collision", prop1))
 print(paste("Proportion for Minor Injury Collision", prop2))
 print(paste("Proportion for Unknown Injury Collision", prop3))
@@ -87,23 +108,75 @@ print(paste("Proportion for Fatal Collision", prop5))
 ```
 The print statements above detail the distribution of the proportions for each class in the Injury Severity column. There is a clear imbalance that will be corrected via SMOTE.
 
-Convert to factor
+Tidyverse doesConvert to factor
 ```{r}
-processed_df$injury_severity <- as.factor(processed_df$injury_severity)
+initial_df$injury_severity <- as.factor(initial_df$injury_severity)
 ```
 
 Will name this data frame balanced_df.
 ```{r}
 # A more balanced dataset
 balanced_df <- SMOTE(
-  processed_df,
-  processed_df$injury_severity
+  initial_df,
+  initial_df$injury_severity
   )
 
 # View distribution of response variable in new dataset
 table(balanced_df$injury_severity)
 ```
 
+The initial dataframe has some simple preprocessing needed to fit a model.
+Next, will perform any remaining preprocessing using recipes.
+```{r}
+library(tidyverse)
+#library(ranger)
+set.seed(120)  # Setting seed
+```
+Quick view of the initial data frame.
+```{r}
+tail(initial_df)
+```
+A "tail" check reveals that the configuration of the data frame does include the wanted
+columns.
+
+Step 1 was transformation of the raw data frame to the initial data frame.
+```{r}
+df <- raw_data %>%
+  filter(
+    raw_data$"Weather Condition" != "",
+    raw_data$"Lighting Condition" != ""
+  ) %>%
+  select(
+    "City",
+    "Weather Condition",
+    "Lighting Condition",
+    "Injury Severity"
+  ) %>%
+  # Converting all the character data types to factors
+  mutate_if(is.character, as.factor) %>%
+  # Change the column names to snake and lower case
+  clean_names()
+```
+So in the above command I incorporated the conversion of character data types to factors
+for all the string types.
+
+Simple training/test set split.
+```{r}
+library(tidymodels)
+crash_split <- initial_split(df, prop = 0.8)
+train_data <- training(crash_split)
+test_data <- testing(crash_split)
+```
+Get the dimensions of the dataframes.
+```{r}
+train_data %>% dim()
+test_data %>% dim()
+```
+Want to apply 10-fold cross-validation.
+```{r}
+train_cv <- vfold_cv(train_data, v = 10)
+```
+Probably won't use the 10-fold cross-validation.
 
 
 
