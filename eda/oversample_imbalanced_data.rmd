@@ -21,7 +21,7 @@ head(raw_data)
 ```
 Install the necessary library and include the library.
 ```{r}
-install.packages("SMOTE")
+#install.packages("SMOTE")
 #library(SMOTE)
 ```
 
@@ -120,7 +120,6 @@ balanced_df <- SMOTE(
   initial_df,
   initial_df$injury_severity
   )
-
 # View distribution of response variable in new dataset
 table(balanced_df$injury_severity)
 ```
@@ -129,7 +128,6 @@ The initial dataframe has some simple preprocessing needed to fit a model.
 Next, will perform any remaining preprocessing using recipes.
 ```{r}
 library(tidyverse)
-#library(ranger)
 set.seed(120)  # Setting seed
 ```
 Quick view of the initial data frame.
@@ -147,7 +145,7 @@ df <- raw_data %>%
     raw_data$"Lighting Condition" != ""
   ) %>%
   select(
-    "City",
+    #"City",
     "Weather Condition",
     "Lighting Condition",
     "Injury Severity"
@@ -177,9 +175,75 @@ Want to apply 10-fold cross-validation.
 train_cv <- vfold_cv(train_data, v = 10)
 ```
 Probably won't use the 10-fold cross-validation.
+Now, want to create a recipe for the random forest model.
+```{r}
+library(themis)
+rf_recipe <-
+  recipe(injury_severity  ~ ., data = train_data) %>%
+  step_downsample(injury_severity, under_ratio =0.75)
+  #step_smote(injury_severity)
+  #step_upsample(injury_severity, over_ratio = 0.50)
+  #prep() %>%
+  #juice()
+rf_recipe
+```
+Train the recipe
+```{r}
+trained_recipe <- rf_recipe %>% prep(train_data)
+trained_recipe
+```
+Create random forest model specifications.
+```{r}
+rf_model <-
+    rand_forest(trees = 1000) %>%
+    set_engine("randomForest") %>%
+    set_mode("classification")
+rf_model
+```
+Setup the workflow
+```{r}
+rf_wflow <-
+  workflow() %>%
+  add_model(rf_model) %>%
+  add_recipe(rf_recipe)
+rf_wflow
+```
 
+```{r}
+training <- rf_recipe %>%
+  bake(new_data = NULL) %>%
+  count(injury_severity, name = "training")
+training
+```
 
+Now, fit the workflow.
+```{r}
+rf_fit <- fit(rf_wflow, data = train_data)
+rf_fit
+```
 
+When I need a quick look at the training data.
+```{r}
+summary(train_data)
+```
 
-
-
+want to resample and gather the performance metrics
+```{r}
+perf_metrics <- metric_set(roc_auc, accuracy, sensitivity, specificity)
+# random forest resample
+rf_rs <- rf_wflow %>%
+  fit_resamples(
+    resamples = train_cv,
+    metrics = perf_metrics,
+    control = control_resamples(save_pred = TRUE)
+  )
+rf_rs
+```
+Evaluate the model
+```{r}
+collect_metrics(rf_rs)
+```
+```{r}
+rf_rs %>%
+  conf_mat_resampled()
+```
