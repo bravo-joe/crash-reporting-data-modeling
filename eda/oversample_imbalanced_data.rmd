@@ -180,9 +180,9 @@ Now, want to create a recipe for the random forest model.
 library(themis)
 rf_recipe <-
   recipe(injury_severity  ~ ., data = train_data) %>%
-  step_downsample(injury_severity, under_ratio =0.75)
+  #step_downsample(injury_severity, under_ratio =0.75)
   #step_smote(injury_severity)
-  #step_upsample(injury_severity, over_ratio = 0.50)
+  step_upsample(injury_severity, over_ratio = 0.50)
   #prep() %>%
   #juice()
 rf_recipe
@@ -246,4 +246,70 @@ collect_metrics(rf_rs)
 ```{r}
 rf_rs %>%
   conf_mat_resampled()
+```
+
+### Prototype the Random Forest model - Take 1
+Will not use workflow for this procedure, but will invoke recipes.
+Step 1: Initiate the recipe
+```{r}
+rf_recipe <-
+  recipe(injury_severity  ~ ., data = train_data) %>%
+  step_upsample(injury_severity, over_ratio = 0.50)
+rf_recipe
+```
+Step 2: Train the data
+```{r}
+# Using prep on the training data
+trained_rf_recipe <- rf_recipe %>% prep(train_data)
+trained_rf_recipe
+```
+Step 3: Bake the recipe
+```{r}
+train_baked <- trained_rf_recipe %>% bake(train_data)
+test_baked <- trained_rf_recipe %>% bake(test_data)
+```
+Step 4: Crete the Random Forest model
+```{r}
+rf_model <- rand_forest(mode = "classification", engine = "randomForest")
+
+rf_model_fit <- rf_model %>%
+  fit(injury_severity  ~ ., data = train_baked)
+
+rf_model_fit %>% extract_fit_engine() %>% varImpPlot(sort = TRUE)
+
+rf_model_pred <- test_baked %>%
+  bind_cols(predict(rf_model_fit, new_data = test_baked)) %>%
+  select(injury_severity, .pred_class, everything())
+rf_model_pred
+
+rf_model_pred %>% metrics(injury_severity, .pred_class)
+```
+```{r}
+```
+```{r}
+```
+### Prototype the Random Forest model - Take 2
+Will not use workflow for this procedure, but will invoke recipes.
+Step 1: Initiate the recipe
+The predictors and outcomes with the preprocesing steps.
+```{r}
+rf_recipe <-
+  recipe(injury_severity  ~ ., data = train_data) %>%
+  step_upsample(injury_severity, over_ratio = 0.50)
+rf_recipe
+```
+Step 2: Train the data
+Create a parsnip model, and then build a workflow with the model and recipe
+```{r}
+# Using prep on the training data
+trained_rf_recipe <- rf_recipe %>% prep(train_data)
+trained_rf_recipe
+```
+```{r}
+```
+```{r}
+```
+```{r}
+```
+```{r}
 ```
