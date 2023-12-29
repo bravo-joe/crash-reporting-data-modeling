@@ -250,25 +250,25 @@ rf_rs %>%
 
 ### Prototype the Random Forest model - Take 1
 Will not use workflow for this procedure, but will invoke recipes.
-Step 1: Initiate the recipe
+Step 1a: Initiate the recipe
 ```{r}
 rf_recipe <-
   recipe(injury_severity  ~ ., data = train_data) %>%
   step_upsample(injury_severity, over_ratio = 0.50)
 rf_recipe
 ```
-Step 2: Train the data
+Step 2a: Train the data
 ```{r}
 # Using prep on the training data
 trained_rf_recipe <- rf_recipe %>% prep(train_data)
 trained_rf_recipe
 ```
-Step 3: Bake the recipe
+Step 3a: Bake the recipe
 ```{r}
 train_baked <- trained_rf_recipe %>% bake(train_data)
 test_baked <- trained_rf_recipe %>% bake(test_data)
 ```
-Step 4: Crete the Random Forest model
+Step 4a: Crete the Random Forest model
 ```{r}
 rf_model <- rand_forest(mode = "classification", engine = "randomForest")
 
@@ -289,8 +289,8 @@ rf_model_pred %>% metrics(injury_severity, .pred_class)
 ```{r}
 ```
 ### Prototype the Random Forest model - Take 2
-Will not use workflow for this procedure, but will invoke recipes.
-Step 1: Initiate the recipe
+Will use workflow for this procedure.
+Step 1b: Initiate the recipe
 The predictors and outcomes with the preprocesing steps.
 ```{r}
 rf_recipe <-
@@ -298,16 +298,26 @@ rf_recipe <-
   step_upsample(injury_severity, over_ratio = 0.50)
 rf_recipe
 ```
-Step 2: Train the data
+Step 2b: Train the data
 Create a parsnip model, and then build a workflow with the model and recipe
 ```{r}
 # Using prep on the training data
-trained_rf_recipe <- rf_recipe %>% prep(train_data)
-trained_rf_recipe
+rf_model_wflow <-
+  workflow() %>%
+  add_model(rf_model) %>%
+  add_recipe(rf_recipe)
+
+rf_model_wflow
 ```
+Step 3b: Fit workflow and data to model
+Call to 'fit()' is used to estimate the preprocessing steps and then fit the random forest model.
 ```{r}
+rf_model_fit <- fit(rf_model_wflow, data = train_data)
+rf_model_fit
 ```
+Step 4b: Use the 'predict()' function to use validation (test) data.
 ```{r}
+predict(rf_model_fit, new_data = test_data)
 ```
 ```{r}
 ```
