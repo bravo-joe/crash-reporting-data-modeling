@@ -12,8 +12,8 @@ library(janitor)
 ```
 Load the dataset.
 ```{r}
-#raw_data <- fread("C:/Users/joepb/Desktop/unzipfolder/WA_Crash_Summary.csv")
-raw_data <- fread("/Volumes/my_passport/data_sets/WA_Crash_Summary.csv")
+raw_data <- fread("C:/Users/joepb/Desktop/unzipfolder/WA_Crash_Summary.csv")
+#raw_data <- fread("/Volumes/my_passport/data_sets/WA_Crash_Summary.csv")
 ```
 Check a sample
 ```{r}
@@ -270,6 +270,7 @@ test_baked <- trained_rf_recipe %>% bake(test_data)
 ```
 Step 4a: Crete the Random Forest model
 ```{r}
+library(randomForest)
 rf_model <- rand_forest(mode = "classification", engine = "randomForest")
 
 rf_model_fit <- rf_model %>%
@@ -283,10 +284,6 @@ rf_model_pred <- test_baked %>%
 rf_model_pred
 
 rf_model_pred %>% metrics(injury_severity, .pred_class)
-```
-```{r}
-```
-```{r}
 ```
 ### Prototype the Random Forest model - Take 2
 Will use workflow for this procedure.
@@ -315,11 +312,60 @@ Call to 'fit()' is used to estimate the preprocessing steps and then fit the ran
 rf_model_fit <- fit(rf_model_wflow, data = train_data)
 rf_model_fit
 ```
-Step 4b: Use the 'predict()' function to use validation (test) data.
+Step 4b: Use the 'predict()' function to use validation (test) data
 ```{r}
-predict(rf_model_fit, new_data = test_data)
+library(caret)
+pred1 <- predict(rf_model_fit, new_data = test_data)
+pred1
 ```
+Step 5b: Extract the performance metrics
 ```{r}
+rf_model_pred_2 <- test_data %>%
+  bind_cols(pred1) %>%
+  select(injury_severity, .pred_class, everything())
+rf_model_pred_2
+
+rf_model_pred_2 %>% metrics(injury_severity, .pred_class)
 ```
+### Prototype the kNN model - Take 1
+Step 1a: Initiate the recipe
 ```{r}
+library(themis)
+knn_recipe <-
+  recipe(injury_severity  ~ ., data = train_data) %>%
+  step_upsample(injury_severity, over_ratio = 0.50) %>%
+  step_dummy(lighting_condition, weather_condition)
+knn_recipe
 ```
+Step 2a: Train the data
+```{r}
+# Using prep on the training data
+trained_knn_recipe <- knn_recipe %>% prep(train_data)
+trained_knn_recipe
+```
+Step 3a: Bake the recipe
+```{r}
+train_baked <- trained_knn_recipe %>% bake(train_data)
+test_baked <- trained_knn_recipe %>% bake(test_data)
+```
+Step 4a: Crete the Random Forest model
+```{r}
+#library(kknn)
+#knn_model <- nearest_neighbor() %>%
+#  set_engine("kknn") %>%
+#  set_mode("classification")
+knn_model <- nearest_neighbor(mode = "classification", engine = "kknn")
+
+knn_model_fit <- knn_model %>%
+  fit(injury_severity  ~ ., data = train_baked)
+
+knn_model_fit %>% extract_fit_engine() %>% varImpPlot(sort = TRUE)
+
+knn_model_pred <- test_baked %>%
+  bind_cols(predict(knn_model_fit, new_data = test_baked)) %>%
+  select(injury_severity, .pred_class, everything())
+knn_model_pred
+
+knn_model_pred %>% metrics(injury_severity, .pred_class)
+```
+
