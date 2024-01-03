@@ -10,6 +10,15 @@ library(dplyr) # for functions
 library(data.table)
 library(janitor)
 ```
+Load more necessary libraries
+```{r}
+library(randomForest)
+library(tidyverse)
+set.seed(120)  # Setting seed
+library(tidymodels)
+library(themis)
+library(doParallel) # All operating systems
+```
 Load the dataset.
 ```{r}
 raw_data <- fread("C:/Users/joepb/Desktop/unzipfolder/WA_Crash_Summary.csv")
@@ -126,10 +135,6 @@ table(balanced_df$injury_severity)
 
 The initial dataframe has some simple preprocessing needed to fit a model.
 Next, will perform any remaining preprocessing using recipes.
-```{r}
-library(tidyverse)
-set.seed(120)  # Setting seed
-```
 Quick view of the initial data frame.
 ```{r}
 tail(initial_df)
@@ -160,7 +165,6 @@ for all the string types.
 
 Simple training/test set split.
 ```{r}
-library(tidymodels)
 crash_split <- initial_split(df, prop = 0.8)
 train_data <- training(crash_split)
 test_data <- testing(crash_split)
@@ -177,7 +181,6 @@ train_cv <- vfold_cv(train_data, v = 10)
 Probably won't use the 10-fold cross-validation.
 Now, want to create a recipe for the random forest model.
 ```{r}
-library(themis)
 rf_recipe <-
   recipe(injury_severity  ~ ., data = train_data) %>%
   #step_downsample(injury_severity, under_ratio =0.75)
@@ -229,7 +232,8 @@ summary(train_data)
 
 want to resample and gather the performance metrics
 ```{r}
-perf_metrics <- metric_set(roc_auc, accuracy, sensitivity, specificity)
+#perf_metrics <- metric_set(roc_auc, accuracy, sensitivity, specificity)
+perf_metrics <- metric_set(roc_auc, accuracy)
 # random forest resample
 rf_rs <- rf_wflow %>%
   fit_resamples(
@@ -257,20 +261,19 @@ rf_recipe <-
   step_upsample(injury_severity, over_ratio = 0.50)
 rf_recipe
 ```
-Step 2a: Train the data
+Step 1b: Train the data
 ```{r}
 # Using prep on the training data
 trained_rf_recipe <- rf_recipe %>% prep(train_data)
 trained_rf_recipe
 ```
-Step 3a: Bake the recipe
+Step 1c: Bake the recipe
 ```{r}
 train_baked <- trained_rf_recipe %>% bake(train_data)
 test_baked <- trained_rf_recipe %>% bake(test_data)
 ```
-Step 4a: Crete the Random Forest model
+Step 1d: Crete the Random Forest model
 ```{r}
-library(randomForest)
 rf_model <- rand_forest(mode = "classification", engine = "randomForest")
 
 rf_model_fit <- rf_model %>%
@@ -287,7 +290,7 @@ rf_model_pred %>% metrics(injury_severity, .pred_class)
 ```
 ### Prototype the Random Forest model - Take 2
 Will use workflow for this procedure.
-Step 1b: Initiate the recipe
+Step 2a: Initiate the recipe
 The predictors and outcomes with the preprocesing steps.
 ```{r}
 rf_recipe <-
@@ -306,19 +309,19 @@ rf_model_wflow <-
 
 rf_model_wflow
 ```
-Step 3b: Fit workflow and data to model
+Step 2c: Fit workflow and data to model
 Call to 'fit()' is used to estimate the preprocessing steps and then fit the random forest model.
 ```{r}
 rf_model_fit <- fit(rf_model_wflow, data = train_data)
 rf_model_fit
 ```
-Step 4b: Use the 'predict()' function to use validation (test) data
+Step 2d: Use the 'predict()' function to use validation (test) data
 ```{r}
 library(caret)
 pred1 <- predict(rf_model_fit, new_data = test_data)
 pred1
 ```
-Step 5b: Extract the performance metrics
+Step 2e: Extract the performance metrics
 ```{r}
 rf_model_pred_2 <- test_data %>%
   bind_cols(pred1) %>%
@@ -327,10 +330,117 @@ rf_model_pred_2
 
 rf_model_pred_2 %>% metrics(injury_severity, .pred_class)
 ```
+### Prototype the Random Forest model - Take 3
+In this iteration of the RF model, I will use the a progression that includes a validation set to obtain
+resampled summary statistics to determine best classification model for this dataset.
+Note, will use the same training data established earlier.
+This step should require about 6 steps.
+Step 3a: Recipe
+```{r}
+rf_recipe_3 <-
+  recipe(injury_severity  ~ ., data = train_data) %>%
+  step_upsample(injury_severity, over_ratio = 0.50)
+rf_recipe_3
+```
+Step 3b: Model
+```{r}
+rf_model_3 <-
+    rand_forest(trees = 1000) %>%
+    set_engine("randomForest") %>%
+    set_mode("classification")
+rf_model_3
+```
+Step 3c: Workflow
+```{r}
+rf_model_wflow_3 <-
+  workflow() %>%
+  add_model(rf_model_3) %>%
+  add_recipe(rf_recipe_3)
+rf_model_wflow_3
+```
+Step 3d: Folds
+```{r}
+val_set <- validation_split(train_data, prop = 3/4)
+#val_set <- initial_validation_split(train_data, prop = 3/4)
+val_set
+```
+Step 3e: Resampling
+```{r}
+# Performance metrics
+perf_metrics_3 <- metric_set(roc_auc, accuracy, sensitivity, specificity)
+# random forest resample
+rf_rs_3 <- rf_model_wflow_3 %>%
+  fit_resamples(
+    resamples = val_set,
+    metrics = perf_metrics_3,
+    control = control_resamples(save_pred = TRUE)
+  )
+rf_rs_3
+```
+Step 3f: Performance Metrics
+```{r}
+collect_metrics(rf_rs_3)
+```
+```{r}
+# Confusion Matrix
+rf_rs_3 %>%
+  conf_mat_resampled()
+```
+There are many instances where the model incorrectly predicted the outcome from the dataset. The accuracy from the resampling confirms this as well.
+### Check processing power
+Number of physical cores in the hardware
+```{r}
+parallel::detectCores(logical = FALSE)
+```
+The number of possible independent processes that can be simultaneously used
+```{r}
+parallel::detectCores(logical = TRUE)
+```
+### Prototype the Random Forest model - Take 4
+This iteration will use parallel processing and difference resampling approach. 
+This step should require about 6 steps.
+```{r}
+# Step 4a: Recipe
+rf_recipe_4 <-
+  recipe(injury_severity  ~ ., data = train_data) %>%
+  step_upsample(injury_severity, over_ratio = 0.50)
+# Step 4b: Model
+rf_model_4 <-
+    rand_forest(trees = 1000) %>%
+    set_engine("randomForest") %>%
+    set_mode("classification")
+# Step 4c: Workflow
+rf_model_wflow_4 <-
+  workflow() %>%
+  add_model(rf_model_4) %>%
+  add_recipe(rf_recipe_4)
+# Step 4d: Folds
+severity_folds <- vfold_cv(train_data, strata = injury_severity)
+```
+Resampling with parallel processing
+```{r}
+#cluster <- makePSOCKcluster(2)
+#registerDoParallel(cluster)
+#doParallel::registerDoParallel()
+# Step 4e: Resampling
+# Performance metrics
+perf_metrics_4 <- metric_set(roc_auc, accuracy)
+# random forest resample
+rf_rs_4 <- rf_model_wflow_4 %>%
+  fit_resamples(
+    resamples = severity_folds,
+    metrics = perf_metrics_4,
+    control = control_resamples(save_pred = TRUE)
+  )
+#stopCluster(cluster)
+rf_rs_4
+```
+
+
+
 ### Prototype the kNN model - Take 1
 Step 1a: Initiate the recipe
 ```{r}
-library(themis)
 knn_recipe <-
   recipe(injury_severity  ~ ., data = train_data) %>%
   step_upsample(injury_severity, over_ratio = 0.50) %>%
