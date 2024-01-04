@@ -399,10 +399,19 @@ parallel::detectCores(logical = TRUE)
 ### Prototype the kNN model - Take 4
 Step 4a: Initiate the recipe
 ```{r}
+# First variation of the recipe
+#crash_data_recipe <-
+#  recipe(injury_severity  ~ ., data = train_data) %>%
+#  #step_upsample(injury_severity, over_ratio = 0.75) %>%
+#  step_dummy(lighting_condition, weather_condition) %>%
+#  step_smote(injury_severity)
+#crash_data_recipe
+
+# Second variation of the recipe
 crash_data_recipe <-
   recipe(injury_severity  ~ ., data = train_data) %>%
-  step_upsample(injury_severity, over_ratio = 0.50) %>%
-  step_dummy(lighting_condition, weather_condition)
+  step_dummy(lighting_condition, weather_condition) %>%
+  step_smote(injury_severity, over_ratio = 0.75)
 crash_data_recipe
 ```
 Step 4b: Train the data
@@ -476,15 +485,24 @@ stopCluster(cluster)
 ```
 ### Prototype the Naive Bayes model - Take 5
 Step 5a: Initiate the recipe
-Will use the same recipe from kNN Model - Take 4
+```{r}
+# Recipe
+crash_data_rec <-
+  recipe(injury_severity  ~ ., data = train_data) %>%
+  step_downsample(injury_severity, under_ratio = 4)
+crash_data_rec
+```
 Step 5b: Set up the Naive Bayes model specifications
 ```{r}
 # Need new package for h2o engine
 library(discrim)
+library(agua)
 #library(naivebayes)
 naive_bayes_model <- naive_Bayes(
   mode = "classification",
+  Laplace = 2.0,
   engine = "naivebayes"
+  #engine = "h2o"
 )
 naive_bayes_model
 ```
@@ -493,11 +511,12 @@ Step 5c: Create workflow
 nb_model_wflow <-
   workflow() %>%
   add_model(naive_bayes_model) %>%
-  add_recipe(crash_data_recipe)
+  add_recipe(crash_data_rec)
 nb_model_wflow
 ```
-Step 5d: Resampling
+Step 5d: Re-sampling
 ```{r}
+severity_folds <- vfold_cv(train_data, strata = injury_severity)
 cluster <- makePSOCKcluster(4)
 registerDoParallel(cluster)
 # Performance metrics
@@ -508,7 +527,8 @@ start_time <- Sys.time()
 nb_rs <- nb_model_wflow %>%
   fit_resamples(
     #resamples = val_set,
-    resamples = train_cv,
+    resamples = severity_folds,
+    #resamples = train_cv,
     metrics = perf_metrics,
     control = control_resamples(save_pred = TRUE)
   )
@@ -528,5 +548,80 @@ The confusion matrix
 nb_rs %>%
   conf_mat_resampled()
 ```
+### Prototype the Support Vector Machine (SVM) model - Take 6
+Step 6a: Initiate the recipe
+```{r}
+# Recipe
+svm_recipe <-
+  recipe(injury_severity  ~ ., data = train_data) %>%
+  step_dummy(lighting_condition, weather_condition) %>%
+  step_downsample(injury_severity, under_ratio = 4)
+svm_recipe
+```
+Step 6b: Set up the SVM model specifications
+```{r}
+library(kernlab)
+svm_model <- svm_rbf(
+  cost = tune(),
+  rbf_sigma = tune()
+  ) %>%
+  set_mode("classification") %>%
+  set_engine("kernlab")
+svm_model
+```
+Step 6c: Create workflow
+```{r}
+svm_model_wflow <-
+  workflow() %>%
+  add_model(svm_model) %>%
+  add_recipe(svm_recipe)
+svm_model_wflow
+```
+Step 6d: Re-sampling
+```{r}
+severity_folds <- vfold_cv(train_data, strata = injury_severity)
+cluster <- makePSOCKcluster(4)
+registerDoParallel(cluster)
+# Performance metrics
+perf_metrics <- metric_set(roc_auc, accuracy, sensitivity, specificity)
+# Begin timing for this model
+start_time <- Sys.time()
+# svm resample
+#svm_rs <- svm_model_wflow %>%
+#  fit_resamples(
+#    #resamples = val_set,
+#    resamples = severity_folds,
+#    #resamples = train_cv,
+#    metrics = perf_metrics,
+#    control = control_resamples(save_pred = TRUE)
+#  )
 
+ctrl <- control_grid(verbose = FALSE, save_pred = TRUE)
+
+formula_res <-
+  svm_model %>% 
+  tune_grid(
+    injury_severity ~ .,
+    resamples = train_cv,
+    metrics = perf_metrics,
+    control = ctrl
+  )
+formula_res
+
+# End time and get the difference 
+end_time <- Sys.time()
+end_time - start_time
+formula_res
+stopCluster(cluster)
+```
+Step 5e: Performance Metrics
+```{r}
+collect_metrics(formula_res)
+```
+The confusion matrix
+```{r}
+# Confusion Matrix
+formula_res %>%
+  conf_mat_resampled()
+```
 
