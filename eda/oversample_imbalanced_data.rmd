@@ -16,6 +16,7 @@ library(randomForest)
 library(tidyverse)
 set.seed(120)  # Setting seed
 library(tidymodels)
+tidymodels_prefer()
 library(themis)
 library(doParallel) # All operating systems
 ```
@@ -24,16 +25,6 @@ Load the dataset.
 raw_data <- fread("C:/Users/joepb/Desktop/unzipfolder/WA_Crash_Summary.csv")
 #raw_data <- fread("/Volumes/my_passport/data_sets/WA_Crash_Summary.csv")
 ```
-Check a sample
-```{r}
-head(raw_data)
-```
-Install the necessary library and include the library.
-```{r}
-#install.packages("SMOTE")
-#library(SMOTE)
-```
-
 Get unique values from data frame.
 ```{r}
 unique(raw_data$"Lighting Condition")
@@ -165,7 +156,7 @@ for all the string types.
 
 Simple training/test set split.
 ```{r}
-crash_split <- initial_split(df, prop = 0.8)
+crash_split <- initial_split(df, prop = 0.75)
 train_data <- training(crash_split)
 test_data <- testing(crash_split)
 ```
@@ -364,6 +355,8 @@ val_set <- validation_split(train_data, prop = 3/4)
 #val_set <- initial_validation_split(train_data, prop = 3/4)
 val_set
 ```
+
+
 Step 3e: Resampling
 ```{r}
 # Performance metrics
@@ -614,7 +607,7 @@ end_time - start_time
 formula_res
 stopCluster(cluster)
 ```
-Step 5e: Performance Metrics
+Step 6e: Performance Metrics
 ```{r}
 collect_metrics(formula_res)
 ```
@@ -624,4 +617,112 @@ The confusion matrix
 formula_res %>%
   conf_mat_resampled()
 ```
+### Prototype the Support Vector Machine (SVM) model - Take 7
+This iteration will attempt a different progression in creating the desired SVM model.
+First, want to get a subset that is 5% of the df data frame.
+```{r}
+num_records <- nrow(df)
+sample_size <- ceiling(num_records * 0.025)
+subset_df <- df[sample(1:num_records, sample_size, replace = FALSE),]
+head(subset_df)
+```
+Step 7a: Create splits, folds, performance metrics, and control object
+```{r}
+# Splits
+splits <- initial_split(subset_df, prop = 0.75, strata = injury_severity)
+train_split <- training(splits)
+test_split <- testing(splits)
+# Folds
+severity_folds <- vfold_cv(train_split, v = 10, strata = injury_severity)
+set.seed(420)
+# Performance metrics
+perf_metrics <- metric_set(roc_auc, accuracy, sensitivity, specificity)
+# Control Object
+ctrl_obj <- control_grid(verbose = FALSE, save_pred = TRUE)
+```
+Step 7b: Initiate the recipe
+Will fit a radial basis function (rbf) SVM to crashes and tune SVM cost parameter and sigma parameter in the kernel function.
+```{r}
+# Recipe
+svm_rec <-
+  recipe(injury_severity  ~ ., data = train_split) %>%
+  step_upsample(injury_severity, over_ratio = 0.75) %>%
+  step_dummy(lighting_condition, weather_condition)
+  #step_downsample(injury_severity, under_ratio = 4)
+svm_rec
+```
+Step 7c: Set up the SVM model specifications
+```{r}
+library(kernlab)
+library(mlbench)
+svm_model <- svm_rbf(
+  cost = tune(),
+  rbf_sigma = tune()
+  ) %>%
+  set_mode("classification") %>%
+  set_engine("kernlab")
+svm_model
+```
+Step 7d: Create workflow
+Set up the workflow and then feed it to the svm model.
+```{r}
+svm_wflow <-
+  workflow() %>%
+  add_model(svm_model) %>%
+  add_recipe(svm_rec)
+svm_wflow
+```
+Step 7e: Executing tune grid
+```{r}
+#cluster <- makePSOCKcluster(4)
+#registerDoParallel(cluster)
+# Begin timing for this model
+start_time <- Sys.time()
+
+#formula_res
+svm_initial <-
+  #svm_model %>%
+  svm_wflow %>%
+  tune_grid(
+    #injury_severity ~ .,
+    resamples = severity_folds,
+    metrics = perf_metrics,
+    control = ctrl_obj
+  )
+#formula_res
+end_time <- Sys.time()
+end_time - start_time
+svm_initial
+#stopCluster(cluster)
+```
+```{r}
+collect_metrics(svm_initial)
+```
+
+
+Step 7e: Create parameters, update, and tune grid
+```{r}
+cluster <- makePSOCKcluster(4)
+registerDoParallel(cluster)
+# Parameters
+svm_params <-
+  svm_wflow %>%
+  parameters() %>%
+  update(rbf_sigma = rbf_sigma(c(-8, -2)))
+# Grid
+start_grid <-
+  svm_params %>%
+  update(
+    cost = cost(c(-9, 4)),
+    rbf_sigma = rbf_sigma(c(-6, -4))) %>%
+  grid_regular(levels = 2)
+set.seed(2)
+# Tune Grid
+svm_initial <-
+  svm_wflow %>%
+  tune_grid(resamples = severity_folds, grid = start_grid, metrics = perf_metrics)
+stopCluster(cluster)
+```
+
+
 
