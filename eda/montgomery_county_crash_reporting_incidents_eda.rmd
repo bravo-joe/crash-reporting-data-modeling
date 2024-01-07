@@ -1,0 +1,59 @@
+---
+title: "Exploratory Data Analysis"
+author: "J. Bravo"
+date: "2024-01-06"
+output: html_document
+---
+Initial data analysis to investigate a new crash data set.
+Load the necessary libraries.
+```{r}
+library(dplyr) # for functions
+library(data.table)
+```
+Load the data.It is Montgomery County Crash Reporting - Incidents Data
+```{r}
+raw_data <- fread("C:/Users/joepb/Desktop/unzipfolder/mont_cty_crash_reporting_incidents_data.csv")
+```
+Want to see the first five values in this initial dataframe.
+```{r}
+head(raw_data)
+```
+Want to get the number of fields in this data frame. One has to serve as the predictor (dependent) variable and the other will serve as predictor (independent) variables. But not all columns will be used.
+```{r}
+ncol(raw_data)
+```
+#### ACRS Report Type
+Get the unique values in the "ACRS Report Type" column. This may be the outcome (dependent) variable.
+```{r}
+unique(raw_data$"ACRS Report Type")
+```
+This is a consideration for the outcome variable. Will consider some more before investigating more.
+#### Collision Type
+```{r}
+unique(raw_data$"Collision Type")
+```
+This is a consideration for the predictor (independent) variable.
+#### Collision Type
+```{r}
+unique(raw_data$"Injury Severity")
+```
+This field has five possible outcomes as compared to the three in the ACRS Report Type. This may be a better option for outcome variable.
+#### Vehicle Damage Extent
+```{r}
+unique(raw_data$"Vehicle Damage Extent")
+```
+#### Possible Predictor Variable - Vehicle Body Type
+```{r}
+unique(raw_data$"Vehicle Body Type")
+```
+#### Possible Predictor Variable - Vehicle Movement
+```{r}
+unique(raw_data$"Vehicle Movement")
+```
+#### Possible Predictor Variable - ACRS Report Type
+```{r}
+unique(raw_data$"ACRS Report Type")
+```
+
+
+
