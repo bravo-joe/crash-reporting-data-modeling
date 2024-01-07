@@ -629,7 +629,7 @@ head(subset_df)
 Step 7a: Create splits, folds, performance metrics, and control object
 ```{r}
 # Splits
-splits <- initial_split(subset_df, prop = 0.75, strata = injury_severity)
+splits <- initial_split(subset_df, prop = 0.50, strata = injury_severity)
 train_split <- training(splits)
 test_split <- testing(splits)
 # Folds
@@ -674,32 +674,26 @@ svm_wflow
 ```
 Step 7e: Executing tune grid
 ```{r}
-#cluster <- makePSOCKcluster(4)
-#registerDoParallel(cluster)
+cluster <- makePSOCKcluster(4)
+registerDoParallel(cluster)
 # Begin timing for this model
 start_time <- Sys.time()
 
-#formula_res
 svm_initial <-
-  #svm_model %>%
   svm_wflow %>%
   tune_grid(
-    #injury_severity ~ .,
     resamples = severity_folds,
     metrics = perf_metrics,
     control = ctrl_obj
   )
-#formula_res
 end_time <- Sys.time()
 end_time - start_time
 svm_initial
-#stopCluster(cluster)
+stopCluster(cluster)
 ```
 ```{r}
 collect_metrics(svm_initial)
 ```
-
-
 Step 7e: Create parameters, update, and tune grid
 ```{r}
 cluster <- makePSOCKcluster(4)
@@ -723,6 +717,129 @@ svm_initial <-
   tune_grid(resamples = severity_folds, grid = start_grid, metrics = perf_metrics)
 stopCluster(cluster)
 ```
+### Prototype the Random Forest model - Take 8
+This iteration will attempt a different progression in creating the desired Random Forest (RF) model.
+First, want to get a subset that is 5% of the df data frame.
+```{r}
+num_records <- nrow(df)
+sample_size <- ceiling(num_records * 0.025)
+subset_df <- df[sample(1:num_records, sample_size, replace = FALSE),]
+head(subset_df)
+```
+Step 8a: Create splits, folds, performance metrics, and control object
+```{r}
+# Splits
+splits <- initial_split(subset_df, prop = 0.50, strata = injury_severity)
+train_split <- training(splits)
+test_split <- testing(splits)
+# Folds
+severity_folds <- vfold_cv(train_split, v = 10, strata = injury_severity)
+set.seed(420)
+# Performance metrics
+perf_metrics <- metric_set(roc_auc, accuracy, sensitivity, specificity)
+# Control Object
+ctrl_obj <- control_grid(verbose = FALSE, save_pred = TRUE)
+```
+Step 8b: Recipe
+```{r}
+rf_rec <-
+  recipe(injury_severity  ~ ., data = train_split) %>%
+  step_upsample(injury_severity, over_ratio = 0.50)
+rf_rec
+```
+Step 8c: Model Specifications
+```{r}
+rf_model <-
+  rand_forest(
+      mtry = tune(),
+      trees = tune(),
+      min_n = tune()
+      ) %>%
+  set_mode("classification") %>%
+  set_engine("randomForest")
+rf_model
+```
+Step 8d: Workflow
+```{r}
+rf_wflow <-
+  workflow() %>%
+  add_model(rf_model) %>%
+  add_recipe(rf_rec)
+rf_wflow
+```
+Step 8e: Executing Tune Grid
+```{r}
+cluster <- makePSOCKcluster(4)
+registerDoParallel(cluster)
+# Begin timing for this model
+start_time <- Sys.time()
 
+rf_initial <-
+  rf_wflow %>%
+  tune_grid(
+    resamples = severity_folds,
+    metrics = perf_metrics,
+    control = ctrl_obj
+  )
+end_time <- Sys.time()
+end_time - start_time
+rf_initial
+stopCluster(cluster)
+```
+Step 8f: Collect performance metrics
+```{r}
+collect_metrics(rf_initial)
+```
+### Prototype the Random Forest model - Take 9
+This iteration will attempt a different progression in creating the desired k - Nearest Neighbor (kNN) model.First, want to get a subset that is 5% of the df data frame.
+Step 9a: Recipe
+```{r}
+knn_recipe <-
+  recipe(injury_severity  ~ ., data = train_split) %>%
+  step_dummy(lighting_condition, weather_condition) %>%
+  step_smote(injury_severity, over_ratio = 0.75)
+knn_recipe
+```
+Step 9b: Model Specifications
+```{r}
+library(kknn)
+knn_model <- nearest_neighbor(
+  neighbors = tune(),
+  weight_func = tune(),
+  dist_power = tune(),
+  mode = "classification",
+  engine = "kknn"
+  )
+knn_model
+```
+Step 4c: Workflow
+```{r}
+knn_wflow <-
+  workflow() %>%
+  add_model(knn_model) %>%
+  add_recipe(knn_recipe)
+knn_wflow
+```
+Step 4d: Create Tuning Grid
+```{r}
+cluster <- makePSOCKcluster(4)
+registerDoParallel(cluster)
+# Begin timing for this model
+start_time <- Sys.time()
 
-
+knn_initial <-
+  knn_wflow %>%
+  tune_grid(
+    resamples = severity_folds,
+    metrics = perf_metrics,
+    control = ctrl_obj
+  )
+end_time <- Sys.time()
+end_time - start_time
+knn_initial
+stopCluster(cluster)
+```
+Step 8f: Collect performance metrics
+```{r}
+collect_metrics(rf_initial)
+```
