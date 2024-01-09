@@ -163,7 +163,9 @@ Before performing Chi-Square testing for the predictor variables, must handle em
 Will first remove the N/A's from this dataset.
 ```{r}
 light_df <- raw_data %>%
-    filter(raw_data$"Light" == "N/A")
+    filter(raw_data$"Light" != "N/A",
+           raw_data$"Light" != "OTHER",
+           raw_data$"Light" != "UNKNOWN")
 nrow(light_df)
 ```
 The number of rows matches the results from the earlier frequency table.
@@ -197,38 +199,99 @@ Frequency distribution plots using ggplot2.
 ```{r}
 # Convert from table to df
 freq_df_vbt <- as.data.frame(freq_tbl_vbt)
+
+# Logic
+labels = c(suv = "(SPORT) UTILITY VEHICLE",
+           blank = "",
+           atv = "ALL TERRAIN VEHICLE (ATV)",
+           amb_em = "AMBULANCE/EMERGENCY",
+           amb_nem = "AMBULANCE/NON EMERGENCY",
+           au_cyl = "AUTOCYCLE",
+           two_axl = "CARGO VAN/LIGHT TRUCK 2 AXLES (OVER 10,000LBS (4,536 KG))",
+           ccb = "CROSS COUNTRY BUS",
+           fv = "FARM VEHICLE",
+           fv_em = "FIRE VEHICLE/EMERGENCY",
+           fv_nem = "FIRE VEHICLE/NON EMERGENCY",
+           limo = "LIMOUSINE",
+           lsv = "LOW SPEED VEHICLE",
+           three_axl = "MEDIUM/HEAVY TRUCKS 3 AXLES (OVER 10,000LBS (4,536KG))",
+           mpd = "MOPED",
+           mc = "MOTORCYCLE",
+           na = "N/A",
+           oth = "OTHER",
+           oth_bs = "OTHER BUS",
+           olt = "OTHER LIGHT TRUCKS (10,000LBS (4,536KG) OR LESS)",
+           pass = "PASSENGER CAR",
+           pickup = "PICKUP TRUCK",
+           pol_em = "POLICE VEHICLE/EMERGENCY",
+           pol_nem = "POLICE VEHICLE/NON EMERGENCY",
+           rv = "RECREATIONAL VEHICLE",
+           sb  = "SCHOOL BUS", 
+           sn_mob = "SNOWMOBILE",
+           sw = "STATION WAGON",
+           tr_bus = "TRANSIT BUS",
+           tt = "TRUCK TRACTOR",
+           unk = "UNKNOWN",
+           vn = "VAN"
+           )
+
 # Plotting logic
-ggplot(freq_df_vbt, aes(x = Var1, y = Freq)) +
+ggplot(data = freq_df_vbt, aes(x=Var1, y=Freq)) +
   geom_point(colour = "firebrick3") +
-  labs(title = "Vehicle Body Type Distribution", x = "Body Type", y = "Frequency") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  geom_text(aes(label = Var1), hjust = -0.05, angle = 45, size = 2.25)
 ```
-Plot frequency distribution using ggplot2.
-```{r}
-# Plotting logic
-ggplot(raw_data, aes(x = as.factor(raw_data$"Vehicle Body Type"))) +
-  geom_bar(fill = "cadetblue2", color = "white") +
-  labs(title = "Vehicle Body Type Distribution", x = "Body Type", y = "Counts") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-```
-
-
 ### Filtering
-Before performing Chi-Square testing for the predictor variables, must handle empty strings and N/A's.
+Before performing Chi-Square testing for the predictor variables, must handle empty strings, N/A's, and "others".
 Will first remove the N/A's from this dataset.
 ```{r}
-light_df <- raw_data %>%
-    filter(raw_data$"Light" == "N/A")
-nrow(light_df)
+vbt_df <- raw_data %>%
+    filter(raw_data$"Vehicle Body Type" != "N/A",
+           raw_data$"Vehicle Body Type" != "OTHER",
+           raw_data$"Vehicle Body Type" != "UNKNOWN",
+           raw_data$"Vehicle Body Type" != ""
+           )
+nrow(vbt_df)
 ```
 The number of rows matches the results from the earlier frequency table.
 ### Chi-Square Testing
 This next chi-square test will check the relationship between injury severity and lighting.
 ```{r}
-light_tbl <- table(light_df$"Injury Severity", light_df$"Light")
-print(light_tbl)
-print(chisq.test(light_tbl, simulate.p.value = TRUE))
+vbt_tbl <- table(vbt_df$"Injury Severity", vbt_df$"Vehicle Body Type")
+print(vbt_tbl)
+print(chisq.test(vbt_tbl, simulate.p.value = TRUE))
 ```
+The resulting p-value = 0.0004998 is less than the 0.05 threshold. Hence, I reject the
+Null Hypothesis that vehicle body type and injury severity are independent of each other.
+Will need to implement some oversampling or undersampling to balance the dataframe. The passenger car class within the vehicle body type field is over-represented.
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
