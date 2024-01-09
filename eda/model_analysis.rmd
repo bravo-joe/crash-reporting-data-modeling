@@ -1,0 +1,102 @@
+---
+title: "Model Analysis"
+author: "J. Bravo"
+date: "2024-01-09"
+output: html_document
+---
+Notebook to compare different models. Objective is to determine the ideal statistical learning model by comparing the performance metrics of four different classification models, specifically, Random Forest (RF), Naive Bayes (NB), k-Nearest Neighbor (kNN) and Support Vector Machines (SVM).
+
+## Load Packages and Data
+Load the necessary libraries and set seed.
+```{r}
+library(dplyr) # for functions
+library(data.table)
+library(janitor)
+library(randomForest)
+library(tidyverse)
+library(tidymodels)
+tidymodels_prefer()
+library(themis)
+library(doParallel) # All operating systems
+set.seed(420)  # Setting seed
+```
+Notice use of relative directory. Will use zip ziles and uncompress.
+```{r}
+# Commands to unzip a data file
+zip_file <- "data/mont_cty_crash_reporting_incidents_data.zip"
+out_dir <- "unzipfolder"
+dir.create(file.path(".", out_dir), showWarnings = FALSE)
+unzip(zip_file, exdir = out_dir)
+```
+Load the data.
+```{r}
+raw_data <- fread("unzipfolder/mont_cty_crash_reporting_incidents_data.csv")
+head(raw_data)
+```
+## Data Pre-Processing
+The exploratory data analysis notebook reveals a need to remove empty strings, N/A's, unknown, and other categories in the applicable fields.
+Recall the relevant features:
+  Independent/Predictor Variables:
+  * Weather
+  * Light
+  * Vehicle Body Type
+  * Speed Limit
+  * Latitude
+  * Longitude
+  Dependent/Outcome Variable:
+  * Injury Severity
+Next, create the initial dataframe that requires some so-called data cleaning.
+```{r}
+initial_df <- raw_data %>%
+  select(
+    "Weather",
+    "Light",
+    "Vehicle Body Type",
+    "Speed Limit",
+    "Latitude",
+    "Longitude",
+    "Injury Severity"
+  ) %>%
+  filter(
+    # Weather
+    raw_data$"Weather" != "OTHER",
+    raw_data$"Weather" != "N/A",
+    raw_data$"Weather" != "UNKNOWN",
+    # Light
+    raw_data$"Light" != "N/A",
+    raw_data$"Light" != "OTHER",
+    raw_data$"Light" != "UNKNOWN",
+    # Vehicle Body Type
+    raw_data$"Vehicle Body Type" != "N/A",
+    raw_data$"Vehicle Body Type" != "OTHER",
+    raw_data$"Vehicle Body Type" != "UNKNOWN",
+    raw_data$"Vehicle Body Type" != ""
+  ) %>%
+  # Converting all the character data types to factors
+  mutate_if(is.character, as.factor) %>%
+  # Convert the only integer, i.e. speed limit, to factor
+  # Will treat speed limit as a categorical variable
+  mutate_if(is.integer, as.factor) %>%
+  # Change the column names to snake and lower case
+  clean_names()
+head(initial_df)
+```
+Want to see the number of records in this new dataframe.
+```{r}
+nrow(initial_df)
+```
+Compute the difference in rows from raw data to cleaned data.
+```{r}
+records_diff <- nrow(raw_data) - nrow(initial_df)
+records_diff
+```
+So there is a difference of about 20k records.
+Compute the proportion of rows that are excluded from the clean data frame.
+```{r}
+proportion_excluded <- records_diff/nrow(raw_data)
+proportion_excluded
+```
+So about 12% of the unprocessed data frame is remove from the cleaned data frame.
+
+
+
