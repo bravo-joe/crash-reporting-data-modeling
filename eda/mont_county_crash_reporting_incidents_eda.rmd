@@ -197,44 +197,8 @@ print(freq_tbl_vbt)
 ### Plots
 Frequency distribution plots using ggplot2.
 ```{r}
-# Convert from table to df
+# Convert from table to dataframe
 freq_df_vbt <- as.data.frame(freq_tbl_vbt)
-
-# Logic
-labels = c(suv = "(SPORT) UTILITY VEHICLE",
-           blank = "",
-           atv = "ALL TERRAIN VEHICLE (ATV)",
-           amb_em = "AMBULANCE/EMERGENCY",
-           amb_nem = "AMBULANCE/NON EMERGENCY",
-           au_cyl = "AUTOCYCLE",
-           two_axl = "CARGO VAN/LIGHT TRUCK 2 AXLES (OVER 10,000LBS (4,536 KG))",
-           ccb = "CROSS COUNTRY BUS",
-           fv = "FARM VEHICLE",
-           fv_em = "FIRE VEHICLE/EMERGENCY",
-           fv_nem = "FIRE VEHICLE/NON EMERGENCY",
-           limo = "LIMOUSINE",
-           lsv = "LOW SPEED VEHICLE",
-           three_axl = "MEDIUM/HEAVY TRUCKS 3 AXLES (OVER 10,000LBS (4,536KG))",
-           mpd = "MOPED",
-           mc = "MOTORCYCLE",
-           na = "N/A",
-           oth = "OTHER",
-           oth_bs = "OTHER BUS",
-           olt = "OTHER LIGHT TRUCKS (10,000LBS (4,536KG) OR LESS)",
-           pass = "PASSENGER CAR",
-           pickup = "PICKUP TRUCK",
-           pol_em = "POLICE VEHICLE/EMERGENCY",
-           pol_nem = "POLICE VEHICLE/NON EMERGENCY",
-           rv = "RECREATIONAL VEHICLE",
-           sb  = "SCHOOL BUS", 
-           sn_mob = "SNOWMOBILE",
-           sw = "STATION WAGON",
-           tr_bus = "TRANSIT BUS",
-           tt = "TRUCK TRACTOR",
-           unk = "UNKNOWN",
-           vn = "VAN"
-           )
-
 # Plotting logic
 ggplot(data = freq_df_vbt, aes(x=Var1, y=Freq)) +
   geom_point(colour = "firebrick3") +
@@ -267,32 +231,113 @@ The resulting p-value = 0.0004998 is less than the 0.05 threshold. Hence, I reje
 Null Hypothesis that vehicle body type and injury severity are independent of each other.
 Will need to implement some oversampling or undersampling to balance the dataframe. The passenger car class within the vehicle body type field is over-represented.
 
- 
+## Speed Limit
+First quantitative variable
+Unique values in this column.
+```{r}
+unique(raw_data$"Speed Limit")
+```
+### Summary Statistics
+Want to get the range, spread, and central tendency measurements for this column.
+```{r}
+# Summary stats
+summary(raw_data$"Speed Limit")
+```
+### Frequency Table
+Now, want frequency distribution of qualitative data
+```{r}
+# sl <-- speed limit
+freq_tbl_sl <- table(raw_data$"Speed Limit")
+print("Frequency Table")
+print(freq_tbl_sl)
+```
+### Plots
+Plot frequency distribution using ggplot2.
+```{r}
+# Plotting logic
+ggplot(raw_data, aes(x = as.factor(raw_data$"Speed Limit"))) +
+  geom_bar(fill = "cadetblue2", color = "white") +
+  labs(title = "Speed Limit Distribution", x = "Speed Limit", y = "Counts") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+``` 
+There is a large jump in number of incidents or crashes from 30 to 35 miles per hour speed limits.
+### Chi-Square Testing
+```{r}
+sl_tbl <- table(raw_data$"Injury Severity", raw_data$"Speed Limit")
+print(sl_tbl)
+print(chisq.test(sl_tbl, simulate.p.value = TRUE))
+```
+The resulting p-value = 0.0004998 is less than the 0.05 threshold. Hence, I reject the
+Null Hypothesis that speed limit and injury severity are independent of each other.
+The distribution reveals that though the 30 - 40 m.p.h range is very well represented, no need to over-sample the less represented speed limits.
 
+## Latitude
+This is one of two quantitative variables to measure location. Will use head/tail because a large number of unique values.
+```{r}
+head(raw_data$"Latitude")
+```
+### Summary Statistics
+Want to get the range, spread, and central tendency measurements for this column.
+```{r}
+summary(raw_data$"Latitude")
+```
+### Plots
+Plot histogram for latitude coordinates using ggplot2.
+```{r}
+# Plotting logic
+ggplot(raw_data, aes(x = raw_data$"Latitude")) + 
+  #geom_histogram(binwidth = 100, fill="#69b3a2", color="#e9ecef", alpha=0.9)
+  #geom_histogram(binwidth = 100, fill="#69b3a2", color="#e9ecef")
+  geom_histogram(bins = 100, fill="#69b3a2", color="#e9ecef") +
+  #geom_histogram(fill="#69b3a2", color="#e9ecef") +
+  #scale_x_binned() +
+  scale_y_sqrt() +
+  labs(title = "Histogram of Latitude Coordinates", x = "Latitude (degrees)", y = "Counts")
+```
+```{r}
+# Plotting logic
+ggplot(raw_data, aes(x = raw_data$"Latitude")) +
+  geom_histogram(binwidth = 0.025, fill="#69b3a2", color="#e9ecef") +
+  scale_x_continuous(breaks = seq(0, 40, 0.25)) +
+  scale_y_sqrt() +
+  labs(title = "Histogram of Latitude Coordinates", x = "Latitude (degrees)", y = "Counts")
+```
+Used some transformations including square root for the y-axis and bin-width adjustment with quarter degree breaks for the x-axis in this histogram. Can see where the majority of incidents/reports occur according to latitude.
+### Perform the C test
+```{r}
+lat_table <- table(raw_data$"Injury Severity", raw_data$"Latitude")
+print(chisq.test(lat_table, simulate.p.value = TRUE))
+```
+The resulting p-value = 0.0004998 is less than the 0.05 threshold. Hence, I reject the
+Null Hypothesis that Latitude and injury severity are independent of each other.
 
+## Longitude
+This is one of two quantitative variables to measure location. Will use head/tail because a large number of unique values.
+```{r}
+head(raw_data$"Longitude")
+```
+### Summary Statistics
+Want to get the range, spread, and central tendency measurements for this column.
+```{r}
+summary(raw_data$"Longitude")
+```
+### Plots
+Plot histogram for latitude coordinates using ggplot2.
+```{r}
+# Plotting logic
+ggplot(raw_data, aes(x = raw_data$"Longitude")) +
+  geom_histogram(binwidth = 0.05, fill="#69b3a2", color="#e9ecef") +
+  labs(title = "Histogram of Longitude Coordinates", x = "Longitude (degrees)", y = "Counts")
+```
+The above histogram details the high frequency in the -78 to -77 degrees longitude range. I removed the square root scaling for the y-axis.
+### Chi-Square Testing
+This next chi-square test will check the relationship between injury severity and longitude.
+```{r}
+long_tbl <- table(raw_data$"Injury Severity", raw_data$"Longitude")
+print(chisq.test(long_tbl, simulate.p.value = TRUE))
+```
+The resulting p-value = 0.0004998 is less than the 0.05 threshold. Hence, I reject the
+Null Hypothesis that Longitude and injury severity are independent of each other.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## Conclusion
+The hypothesis testing suggests that the chosen predictor variables that are speed limit, longitude, latitude, weather, light, are vehicle body type may be related to the outcome variable that is injury severity. These are the variables that will be used to create a statistical learning model. The plots demonstrate the imbalances in the data. Clear in the weather column, daylight in the lighting, and passenger car in vehicle body types are all heavily represented creating this imbalance. To balance the data, will use some over-sampling or under-sampling technique. For the location variables (Latitude and Longitude) will probably need to use some standardization or normalization technique. Not decided on the speed limit variable. Not sure if I want to treat it as qualitative or quantitative variable.
