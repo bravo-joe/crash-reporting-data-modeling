@@ -18,6 +18,7 @@ library(tidymodels)
 tidymodels_prefer()
 library(themis)
 library(doParallel) # All operating systems
+library(kernlab) # For SVM model
 set.seed(420)  # Setting seed
 ```
 Notice use of relative directory. Will use zip ziles and uncompress.
@@ -172,13 +173,57 @@ Step 1f: Collect performance metrics
 ```{r}
 collect_metrics(rf_initial)
 ```
-
-
-
-
+## Prototype the Support Vector Machine (SVM) Model
+Step 2a: Initiate the recipe
+```{r}
+# Recipe
+svm_recipe <-
+  recipe(injury_severity  ~ ., data = train_split) %>%
+  step_dummy(weather, light, vehicle_body_type) %>%
+  step_upsample(injury_severity, over_ratio = 0.53)
+svm_recipe
+```
+Step 2b: SVM Model Specifications
+```{r}
+svm_model <- svm_rbf(
+  cost = tune(),
+  rbf_sigma = tune()
+  ) %>%
+  set_mode("classification") %>%
+  set_engine("kernlab")
+svm_model
+```
+Step 2c: Create workflow
+```{r}
+svm_wflow <-
+  workflow() %>%
+  add_model(svm_model) %>%
+  add_recipe(svm_recipe)
+svm_wflow
+```
+Step 2d: Executing Grid
 ```{r}
 all_cores <- parallel::detectCores(logical = FALSE)
-
+cluster <- makePSOCKcluster(all_cores)
+registerDoParallel(cluster)
+# Begin timing for this model
+start_time <- Sys.time()
+perf_metrics <- metric_set(roc_auc, recall, precision, f_meas)
+svm_initial <-
+  svm_wflow %>% 
+  tune_grid(
+    resamples = severity_folds,
+    metrics = perf_metrics,
+    control = ctrl_obj
+  )
+end_time <- Sys.time()
+end_time - start_time
+svm_initial
+stopCluster(cluster)
+```
+Step 2e: Collect performance metrics
+```{r}
+collect_metrics(svm_initial)
 ```
 ## Cleanup
 ```{r}
