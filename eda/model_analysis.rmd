@@ -25,12 +25,12 @@ Notice use of relative directory. Will use zip ziles and uncompress.
 # Commands to unzip a data file
 zip_file <- "data/mont_cty_crash_reporting_incidents_data.zip"
 out_dir <- "unzipfolder"
-dir.create(file.path(".", out_dir), showWarnings = FALSE)
+dir.create(file.path(".", out_dir), showWarnings = TRUE)
 unzip(zip_file, exdir = out_dir)
 ```
 Load the data.
 ```{r}
-raw_data <- fread("unzipfolder/mont_cty_crash_reporting_incidents_data.csv")
+raw_data <- fread("../unzipfolder/mont_cty_crash_reporting_incidents_data.csv")
 head(raw_data)
 ```
 ## Data Pre-Processing
@@ -53,8 +53,8 @@ initial_df <- raw_data %>%
     "Light",
     "Vehicle Body Type",
     "Speed Limit",
-    "Latitude",
-    "Longitude",
+    #"Latitude",
+    #"Longitude",
     "Injury Severity"
   ) %>%
   filter(
@@ -98,5 +98,89 @@ proportion_excluded
 ```
 So about 12% of the unprocessed data frame is remove from the cleaned data frame.
 
+## Get a Subset
+For testing purposes, will use a 2.5% sample of the new data set.
+```{r}
+num_records <- nrow(initial_df)
+sample_size <- ceiling(num_records * 0.025)
+#sample_size <- 1200L
+subset_df <- initial_df[sample(1:num_records, sample_size, replace = FALSE),]
+head(subset_df)
+```
+
+## Prototype the Random Forest Model
+Step 1a: Create splits, folds, performance metrics, and control object
+```{r}
+# Splits
+#splits <- initial_split(subset_df, prop = 0.50, strata = injury_severity)
+splits <- initial_split(subset_df, prop = 0.75, strata = injury_severity)
+train_split <- training(splits)
+test_split <- testing(splits)
+# Folds
+severity_folds <- vfold_cv(train_split, v = 10, strata = injury_severity)
+# Performance metrics
+perf_metrics <- metric_set(roc_auc, accuracy, sensitivity, specificity)
+# Control Object
+ctrl_obj <- control_grid(verbose = FALSE, save_pred = TRUE)
+```
+Step 1b: Recipe
+```{r}
+rf_rec <-
+  recipe(injury_severity  ~ ., data = train_split) %>%
+  step_upsample(injury_severity, over_ratio = 0.53)
+rf_rec
+```
+Step 1c: Model Specifications
+```{r}
+rf_model <-
+  rand_forest(
+      mtry = tune(),
+      trees = tune(),
+      min_n = tune()
+      ) %>%
+  set_mode("classification") %>%
+  set_engine("randomForest")
+rf_model
+```
+Step 1d: Workflow
+```{r}
+rf_wflow <-
+  workflow() %>%
+  add_model(rf_model) %>%
+  add_recipe(rf_rec)
+rf_wflow
+```
+Step 1e: Executing Tune Grid
+```{r}
+cluster <- makePSOCKcluster(4)
+registerDoParallel(cluster)
+# Begin timing for this model
+start_time <- Sys.time()
+rf_initial <-
+  rf_wflow %>%
+  tune_grid(
+    resamples = severity_folds,
+    metrics = perf_metrics,
+    control = ctrl_obj
+  )
+end_time <- Sys.time()
+end_time - start_time
+rf_initial
+stopCluster(cluster)
+```
+Step 1f: Collect performance metrics
+```{r}
+collect_metrics(rf_initial)
+```
 
 
+
+
+```{r}
+all_cores <- parallel::detectCores(logical = FALSE)
+
+```
+## Cleanup
+```{r}
+unlink("unzipfolder", recursive = TRUE)
+```
