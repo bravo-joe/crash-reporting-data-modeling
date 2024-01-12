@@ -24,14 +24,19 @@ set.seed(420)  # Setting seed
 Notice use of relative directory. Will use zip ziles and uncompress.
 ```{r}
 # Commands to unzip a data file
-zip_file <- "data/mont_cty_crash_reporting_incidents_data.zip"
-out_dir <- "unzipfolder"
-dir.create(file.path(".", out_dir), showWarnings = TRUE)
-unzip(zip_file, exdir = out_dir)
+zip_file <- "../data/mont_cty_crash_reporting_incidents_data.zip"
+out_dir <- "data_folder"
+# Check if subdirectory exists
+if (file.exists(out_dir)){
+  unzip(zip_file, exdir = out_dir)
+} else {
+  dir.create(file.path(".", out_dir), showWarnings = TRUE)
+  unzip(zip_file, exdir = out_dir)
+}
 ```
 Load the data.
 ```{r}
-raw_data <- fread("../unzipfolder/mont_cty_crash_reporting_incidents_data.csv")
+raw_data <- fread("data_folder/mont_cty_crash_reporting_incidents_data.csv")
 head(raw_data)
 ```
 ## Data Pre-Processing
@@ -357,6 +362,7 @@ nb_rec
 ```
 Step 4b: Naive Bayes Model Specifications
 ```{r}
+library(discrim)
 naive_bayes_model <- naive_Bayes(
   mode = "classification",
   smoothness = tune(),
@@ -419,8 +425,7 @@ Accuracy
 ```{r}
 show_best(nb_rs, metric = "accuracy")
 ```
-
 ## Cleanup
 ```{r}
-unlink("unzipfolder", recursive = TRUE)
+unlink("data_folder", recursive = TRUE)
 ```
