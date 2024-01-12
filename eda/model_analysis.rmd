@@ -104,34 +104,37 @@ For testing purposes, will use a 2.5% sample of the new data set.
 ```{r}
 num_records <- nrow(initial_df)
 sample_size <- ceiling(num_records * 0.025)
-#sample_size <- 1200L
 subset_df <- initial_df[sample(1:num_records, sample_size, replace = FALSE),]
 head(subset_df)
 ```
-
-## Prototype the Random Forest Model
-Step 1a: Create splits, folds, performance metrics, and control object
+## Create splits, folds, performance metrics, and control object
 ```{r}
 # Splits
-#splits <- initial_split(subset_df, prop = 0.50, strata = injury_severity)
 splits <- initial_split(subset_df, prop = 0.75, strata = injury_severity)
 train_split <- training(splits)
 test_split <- testing(splits)
 # Folds
 severity_folds <- vfold_cv(train_split, v = 10, strata = injury_severity)
-# Performance metrics
-perf_metrics <- metric_set(roc_auc, accuracy, sensitivity, specificity)
+# Performance metrics - classification model
+perf_metrics <- metric_set(roc_auc, recall, precision, f_meas)
 # Control Object
 ctrl_obj <- control_grid(verbose = FALSE, save_pred = TRUE)
 ```
-Step 1b: Recipe
+## Configurations
+```{r}
+# Cluster
+all_cores <- parallel::detectCores(logical = FALSE)
+cluster <- makePSOCKcluster(all_cores)
+```
+## Prototype the Random Forest Model
+Step 1a: Recipe
 ```{r}
 rf_rec <-
   recipe(injury_severity  ~ ., data = train_split) %>%
-  step_upsample(injury_severity, over_ratio = 0.53)
+  step_upsample(injury_severity, over_ratio = 1.0)
 rf_rec
 ```
-Step 1c: Model Specifications
+Step 1b: Model Specifications
 ```{r}
 rf_model <-
   rand_forest(
@@ -143,7 +146,7 @@ rf_model <-
   set_engine("randomForest")
 rf_model
 ```
-Step 1d: Workflow
+Step 1c: Workflow
 ```{r}
 rf_wflow <-
   workflow() %>%
@@ -151,9 +154,8 @@ rf_wflow <-
   add_recipe(rf_rec)
 rf_wflow
 ```
-Step 1e: Executing Tune Grid
+Step 1d: Executing Tune Grid
 ```{r}
-cluster <- makePSOCKcluster(4)
 registerDoParallel(cluster)
 # Begin timing for this model
 start_time <- Sys.time()
@@ -169,9 +171,32 @@ end_time - start_time
 rf_initial
 stopCluster(cluster)
 ```
-Step 1f: Collect performance metrics
+Step 1e: Collect performance metrics
 ```{r}
-collect_metrics(rf_initial)
+rf_perf_metrics <- collect_metrics(rf_initial)
+rf_perf_metrics
+```
+autoplot
+```{r}
+autoplot(rf_initial) +
+  scale_color_viridis_d(direction = -1) +
+  theme(legend.position = "top")
+```
+F1 Score
+```{r}
+show_best(rf_initial, metric = "f_meas")
+```
+Precision
+```{r}
+show_best(rf_initial, metric = "precision")
+```
+Recall
+```{r}
+show_best(rf_initial, metric = "recall")
+```
+ROC-AUC
+```{r}
+show_best(rf_initial, metric = "roc_auc")
 ```
 ## Prototype the Support Vector Machine (SVM) Model
 Step 2a: Initiate the recipe
@@ -180,7 +205,7 @@ Step 2a: Initiate the recipe
 svm_recipe <-
   recipe(injury_severity  ~ ., data = train_split) %>%
   step_dummy(weather, light, vehicle_body_type) %>%
-  step_upsample(injury_severity, over_ratio = 0.53)
+  step_upsample(injury_severity, over_ratio = 1.0)
 svm_recipe
 ```
 Step 2b: SVM Model Specifications
@@ -203,8 +228,6 @@ svm_wflow
 ```
 Step 2d: Executing Grid
 ```{r}
-all_cores <- parallel::detectCores(logical = FALSE)
-cluster <- makePSOCKcluster(all_cores)
 registerDoParallel(cluster)
 # Begin timing for this model
 start_time <- Sys.time()
@@ -223,8 +246,180 @@ stopCluster(cluster)
 ```
 Step 2e: Collect performance metrics
 ```{r}
-collect_metrics(svm_initial)
+svm_perf_metrics <- collect_metrics(svm_initial)
+svm_perf_metrics
 ```
+AutoPlot
+```{r}
+autoplot(svm_initial) +
+  scale_color_viridis_d(direction = -1) +
+  theme(legend.position = "top")
+```
+F1 Score
+```{r}
+show_best(svm_initial, metric = "f_meas")
+```
+Precision
+```{r}
+show_best(svm_initial, metric = "precision")
+```
+Recall
+```{r}
+show_best(svm_initial, metric = "recall")
+```
+ROC-AUC
+```{r}
+show_best(svm_initial, metric = "roc_auc")
+```
+## Prototype the k-Nearest Neighbor model
+Step 3a: Recipe
+```{r}
+knn_recipe <-
+  recipe(injury_severity  ~ ., data = train_split) %>%
+  step_dummy(weather, light, vehicle_body_type) %>%
+  step_upsample(injury_severity, over_ratio = 1.0)
+knn_recipe
+```
+Step 3b: Model Specifications
+```{r}
+library(kknn)
+knn_model <- nearest_neighbor(
+  neighbors = tune(),
+  weight_func = tune(),
+  dist_power = tune(),
+  mode = "classification",
+  engine = "kknn"
+  )
+knn_model
+```
+Step 3c: Workflow
+```{r}
+knn_wflow <-
+  workflow() %>%
+  add_model(knn_model) %>%
+  add_recipe(knn_recipe)
+knn_wflow
+```
+Step 3d: Create Tuning Grid
+```{r}
+registerDoParallel(cluster)
+# Begin timing for this model
+start_time <- Sys.time()
+# Grid Tuning
+knn_initial <-
+  knn_wflow %>%
+  tune_grid(
+    resamples = severity_folds,
+    metrics = perf_metrics,
+    control = ctrl_obj
+  )
+end_time <- Sys.time()
+end_time - start_time
+knn_initial
+stopCluster(cluster)
+```
+Step 3e: Collect performance metrics
+```{r}
+knn_perf_metrics <- collect_metrics(knn_initial)
+knn_perf_metrics
+```
+AutoPlot - show the performance profile across tuning parameters
+```{r}
+autoplot(knn_initial) +
+  scale_color_viridis_d(direction = -1) +
+  theme(legend.position = "top")
+```
+F1 Score
+```{r}
+show_best(knn_initial, metric = "f_meas")
+```
+Precision
+```{r}
+show_best(knn_initial, metric = "precision")
+```
+Recall
+```{r}
+show_best(knn_initial, metric = "recall")
+```
+ROC-AUC
+```{r}
+show_best(knn_initial, metric = "roc_auc")
+```
+## Prototype the Naive Bayes Model
+Step 4a: Initiate the recipe
+```{r}
+# Recipe
+nb_rec <-
+  recipe(injury_severity  ~ ., data = train_split) %>%
+  step_dummy(weather, light, vehicle_body_type) %>%
+  step_upsample(injury_severity, over_ratio = 1.0)
+nb_rec
+```
+Step 4b: Naive Bayes Model Specifications
+```{r}
+naive_bayes_model <- naive_Bayes(
+  mode = "classification",
+  smoothness = tune(),
+  Laplace = tune(),
+  engine = "naivebayes"
+)
+naive_bayes_model
+```
+Step 4c: Create workflow
+```{r}
+nb_model_wflow <-
+  workflow() %>%
+  add_model(naive_bayes_model) %>%
+  add_recipe(nb_rec)
+nb_model_wflow
+```
+Step 4d: Re-sampling
+```{r}
+perf_metrics <- metric_set(accuracy, recall, precision, f_meas)
+registerDoParallel(cluster)
+# Begin timing for this model
+start_time <- Sys.time()
+# Naive Bayes resample
+nb_rs <- nb_model_wflow %>%
+    tune_grid(
+    resamples = severity_folds,
+    metrics = perf_metrics,
+    control = ctrl_obj
+  )
+# End time and get the difference 
+end_time <- Sys.time()
+end_time - start_time
+nb_rs
+stopCluster(cluster)
+```
+Step 4e: Performance Metrics
+```{r}
+nb_perf_metrics <- collect_metrics(nb_rs)
+nb_perf_metrics
+```
+AutoPlot - show the performance profile across tuning parameters
+```{r}
+autoplot(nb_rs) +
+  scale_color_viridis_d(direction = -1) +
+  theme(legend.position = "top")
+```
+F1 Score
+```{r}
+show_best(nb_rs, metric = "f_meas")
+```
+Precision
+```{r}
+show_best(nb_rs, metric = "precision")
+```
+Recall
+```{r}
+show_best(nb_rs, metric = "recall")
+```
+Accuracy
+```{r}
+show_best(nb_rs, metric = "accuracy")
+```
+
 ## Cleanup
 ```{r}
 unlink("unzipfolder", recursive = TRUE)
