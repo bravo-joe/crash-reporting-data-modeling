@@ -356,8 +356,8 @@ Step 4a: Initiate the recipe
 # Recipe
 nb_rec <-
   recipe(injury_severity  ~ ., data = train_split) %>%
-  step_dummy(weather, light, vehicle_body_type) %>%
-  step_upsample(injury_severity, over_ratio = 1.0)
+  step_upsample(injury_severity, over_ratio = 1.0) %>%
+  step_dummy(weather, light, vehicle_body_type)
 nb_rec
 ```
 Step 4b: Naive Bayes Model Specifications
@@ -381,8 +381,10 @@ nb_model_wflow
 ```
 Step 4d: Re-sampling
 ```{r}
+#library(rstanarm)
 perf_metrics <- metric_set(accuracy, recall, precision, f_meas)
 registerDoParallel(cluster)
+#clusterCall(cluster, function(x) .libPaths(x), .libPaths())
 # Begin timing for this model
 start_time <- Sys.time()
 # Naive Bayes resample
