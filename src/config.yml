@@ -1,0 +1,8 @@
+# Config File
+default:
+    dataset: "../data/mont_cty_crash_reporting_incidents_data.zip"
+    output_dir: "data_folder"
+
+production:
+    dataset:
+    
