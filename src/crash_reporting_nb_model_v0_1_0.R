@@ -130,6 +130,79 @@ p2 <-
   ggtitle("Processed validation set data")
 p2
   
+# Apply model recipe to new data
+test_data_transformed <-
+  prep(nb_rec) %>%
+  bake(new_data = test_split)
+
+# Store predictions/results in its own variable
+result <-
+  predict(
+    object = extract_fit_parsnip(
+      nb_model
+    ),
+    new_data = test_data_transformed,
+    type = "class"
+  )
+
+###################################################
+# Will attempt different approach to modeling
+# Create 2 custom functions
+###################################################
+# Create prediction tables
+predict_table <- function(model, data, tidy_flag){
+  if (tidy_flag == TRUE) {
+    result <- model %>%
+      predict(data) %>%
+      rename(pred = .pred) %>%
+      mutate(
+        actual = data$total,
+        pred_real = pred^3,
+        actual_real = actual^3
+      )
+  } else {
+    result <- model %>%
+      predict(data) %>%
+      as_tibble_col(column_name = "pred") %>%
+      mutate(
+        actual = data$total,
+        pred_real = pred^3,
+        actual_real = actual^3
+      )
+  }
+  result
+}
+
+nb_model <- naive_Bayes(
+  mode = "classification",
+  smoothness = tune(),
+  Laplace = tune(),
+  engine = "naivebayes"
+)
+
+nb_wflow <-
+  workflow() %>%
+  add_model(naive_bayes_model) %>%
+  add_recipe(nb_rec)
+
+# Folds
+severity_folds <- vfold_cv(train_split, v = 10, strata = injury_severity)
+# Performance metrics - classification model
+perf_metrics <- metric_set(roc_auc, recall, precision, f_meas)
+# Control Object
+ctrl_obj <- control_grid(verbose = FALSE, save_pred = TRUE)
+
+nb_tune <- nb_wflow %>%
+  tune_grid(
+    resamples = severity_folds,
+    metrics = perf_metrics,
+    control = ctrl_obj
+  )
+
+# Fit with best parameters
+nb_best <-
+  finalize_workflow(nb_wflow, select_best(nb_tune)) %>%
+  fit(train_split)
 
 
 
