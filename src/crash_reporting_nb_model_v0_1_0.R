@@ -109,7 +109,7 @@ results_tbl <- bind_cols(actual = test_split$injury_severity, predicted = nb_pre
 results_tbl
 
 # 8. Output result table to csv file
-write.csv(results_tbl, config$results_tbl)
+write.csv(results_tbl, config$results_tbl, row.names=FALSE)
 
 # Cleanup
 #unlink("data_folder", recursive = TRUE)
