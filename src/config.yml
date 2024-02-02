@@ -3,6 +3,7 @@ default:
     dataset: "../data/mont_cty_crash_reporting_incidents_data.zip"
     output_dir: "data_folder"
     data_loc: "data_folder/mont_cty_crash_reporting_incidents_data.csv"
+    results_tbl: "data_folder/results_tbl.csv"
     # Hyperparameters
     smoothness: 1.1195768
     laplace: 1.3857733
