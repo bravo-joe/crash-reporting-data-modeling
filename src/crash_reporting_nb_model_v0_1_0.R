@@ -59,9 +59,9 @@ preproc_df <- raw_data %>%
   # Change the column names to snake and lower case
   clean_names()
 
-# Want a 2.5% subset of data for testing
+# Want a 15% subset of data for testing
 num_records <- nrow(preproc_df)
-sample_size <- ceiling(num_records * 0.025)
+sample_size <- ceiling(num_records * 0.15)
 subset_df <- preproc_df[sample(1:num_records, sample_size, replace = FALSE),]
 head(subset_df)
 
