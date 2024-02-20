@@ -1,7 +1,7 @@
 # Beginning of confusion_matrix_heatmap.R
 #library(tidyverse)
 library(shiny)
-library("mod-cm.R")
+source("mod-cm.R")
 library(data.table)
 library(yardstick)
 set.seed(525)  # Setting seed
@@ -11,7 +11,7 @@ config <- config::get(file="../src/config.yml")
 
 # Load data into variable
 results_tbl <- fread(
-  file = config$results_tbl,
+  file = config$results,
   stringsAsFactors = TRUE,
   header = TRUE
 )
@@ -27,6 +27,8 @@ plt$Prediction <- factor(plt$Prediction, levels=rev(levels(plt$Prediction)))
 #  labs(x="Truth", y="Prediction")
   
 ui <- fluidPage(
+  # App Title
+  titlePanel("Crash Data Modeling"),
   chartUI(id = "chart1")
 )
 
@@ -35,6 +37,7 @@ server <- function(input, output, session) {
     id = "chart1",
     x = plt$Prediction,
     y = plt$Truth,
+    freq = plt$Freq,
     title = "Confusion Matrix"
   )
 }

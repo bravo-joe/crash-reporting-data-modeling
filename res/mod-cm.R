@@ -8,11 +8,11 @@ chartUI <- function(id) {
   # namespace
   ns <- NS(id)
   fluidRow(
-    plotOutput(outputId = ns("confusion_matrix"))
+    plotOutput(outputId = ns("conf_matrix"))
   )
 }
 
-chartServer <- function(id, x, y, title) {
+chartServer <- function(id, x, y, freq, title) {
   moduleServer(
     id = id,
     module = function(input, output, session) {
@@ -20,13 +20,14 @@ chartServer <- function(id, x, y, title) {
       df <- reactive({
         data.frame(
           x = x,
-          y = y
+          y = y,
+          freq = freq
         )
       })
       # Render a plot
-      output$confusion_matrix <- renderPlot({
-        ggplot(df(), aes(x = x, y = y, fill = Freq)) +
-          geom_tile() + geom_text(aes(label=Freq)) +
+      output$conf_matrix <- renderPlot({
+        ggplot(df(), aes(x = x, y = y, fill = freq)) +
+          geom_tile() + geom_text(aes(label=freq)) +
           scale_fill_gradient(low="white", high="#009194") +
           labs(x="Truth", y="Prediction", title = title)
       })
