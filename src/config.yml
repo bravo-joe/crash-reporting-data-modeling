@@ -4,6 +4,7 @@ default:
     output_dir: "data_folder"
     data_loc: "data_folder/mont_cty_crash_reporting_incidents_data.csv"
     results_tbl: "data_folder/results_tbl.csv"
+    perf_metrics: "data_folder/perf_metrics.csv"
     results: "../src/data_folder/results_tbl.csv"
     # Hyperparameters
     smoothness: 1.1195768

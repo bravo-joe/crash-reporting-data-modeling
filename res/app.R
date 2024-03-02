@@ -25,6 +25,9 @@ plt$Prediction <- factor(plt$Prediction, levels=rev(levels(plt$Prediction)))
 #  geom_tile() + geom_text(aes(label=Freq)) +
 #  scale_fill_gradient(low="white", high="#009194") +
 #  labs(x="Truth", y="Prediction")
+
+# Compute performance metrics
+sensitivity(plt, plt$Truth, plt$Prediction, estimator="macro")
   
 ui <- fluidPage(
   # App Title
