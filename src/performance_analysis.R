@@ -50,3 +50,4 @@ perf_metr_3 <- as.data.frame(perf_metr_3)
 write.csv(perf_metr_3, config$perf_metrics, row.names=FALSE)
 
 # End of performance_analysis.R
+

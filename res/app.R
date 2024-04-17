@@ -32,7 +32,16 @@ sensitivity(plt, plt$Truth, plt$Prediction, estimator="macro")
 ui <- fluidPage(
   # App Title
   titlePanel("Crash Data Modeling"),
-  chartUI(id = "chart1")
+  sidebarLayout(
+    sidebarPanel(
+      tags$h3("Statistical Model Showcase"),
+      tags$hr()
+    )
+  ),
+  # Need Main Panel
+  mainPanel(
+    chartUI(id = "chart1")
+  )
 )
 
 server <- function(input, output, session) {
