@@ -1,6 +1,6 @@
 # Beginning of confusion_matrix_heatmap.R
-#library(tidyverse)
-library(shiny)
+library(shinydashboard)
+#library(shiny)
 source("mod-cm.R")
 library(data.table)
 library(yardstick)
@@ -28,26 +28,28 @@ plt$Prediction <- factor(plt$Prediction, levels=rev(levels(plt$Prediction)))
 
 # Compute performance metrics
 sensitivity(plt, plt$Truth, plt$Prediction, estimator="macro")
-  
-ui <- fluidPage(
+
+# Performance metrics
+perf_metrics <- fread(
+  file = '../src/data_folder/perf_metrics.csv',
+  stringsAsFactors = TRUE,
+  header = TRUE
+)
+perf_metrics
+
+ui <- dashboardPage(
   # App Title
-  titlePanel("Crash Data Modeling"),
-  sidebarLayout(
-    sidebarPanel(
-      tags$h3("Statistical Model Showcase"),
-      tags$hr()
-  ),
-  # Need Main Panel
-  mainPanel(
-    chartUI(id = "chart1")
+  dashboardHeader(title = "Crash Data Modeling"),
+  dashboardSidebar(),
+  dashboardBody(
+    # Need Dashboard Body
+    fluidRow(
+      chartUI(id = "chart1")
     ),
-  # Value Box
-#  value_box(
-#    title = "value box",
-#    value = 10,
-#    ##showcase = bsicons::bs_icon("bar-chart"),
-#    theme = "teal"
-#    )
+    fluidRow(
+      # A static valueBox
+      valueBox(perf_metrics$.estimate[[1]], "Accuracy", icon = icon("list"))
+    )
   )
 )
 
