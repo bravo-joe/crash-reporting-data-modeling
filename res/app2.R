@@ -21,17 +21,9 @@ cm <- conf_mat(results_tbl, actual, predicted)
 plt <- as.data.frame(cm$table)
 plt$Prediction <- factor(plt$Prediction, levels=rev(levels(plt$Prediction)))
 
-#ggplot(plt, aes(Prediction, Truth, fill=Freq)) +
-#  geom_tile() + geom_text(aes(label=Freq)) +
-#  scale_fill_gradient(low="white", high="#009194") +
-#  labs(x="Truth", y="Prediction")
-
-# Compute performance metrics
-sensitivity(plt, plt$Truth, plt$Prediction, estimator="macro")
-
 # Performance metrics
 perf_metrics <- fread(
-  file = '../src/data_folder/perf_metrics.csv',
+  file = config$perf_metrics,
   stringsAsFactors = TRUE,
   header = TRUE
 )
